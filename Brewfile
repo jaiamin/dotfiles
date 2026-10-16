@@ -1,4 +1,3 @@
-tap "stablyai/orca", trusted: { casks: ["orca"] }
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # GitHub command-line tool
