@@ -12,5 +12,16 @@
       "type": "local",
       "command": ["npx", "-y", "@playwright/mcp@latest"]
     }
+  },
+  "permission": {
+    "edit": "allow",
+    "webfetch": "allow",
+    "bash": {
+      "*": "allow",
+      "rm -rf*": "deny", "sudo *": "deny",
+      "git push --force*": "deny", "git push -f*": "deny", "git push origin main*": "deny",
+      "git reset --hard*": "deny", "git rebase*": "deny",
+      "curl * | sh*": "deny", "curl * | bash*": "deny"
+    }
   }
 }

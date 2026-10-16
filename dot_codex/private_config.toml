@@ -1,3 +1,9 @@
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
 [tui]
 screen_reader_detection_done = true
 
@@ -16,6 +22,12 @@ url = "https://mcp.context7.com/mcp"
 [mcp_servers.playwright]
 command = "npx"
 args = ["-y", "@playwright/mcp@latest"]
+
+[mcp_servers.playwright.tools.browser_resize]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_evaluate]
+approval_mode = "approve"
 
 [desktop]
 followUpQueueMode = "steer"

@@ -6,5 +6,16 @@
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true
   },
-  "theme": "auto"
+  "theme": "auto",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": ["Bash", "Edit", "Write", "WebFetch", "WebSearch", "mcp__context7"],
+    "deny": [
+      "Read(./.env*)", "Read(**/.env*)", "Read(~/.ssh/**)",
+      "Bash(rm -rf *)", "Bash(sudo *)",
+      "Bash(git push --force*)", "Bash(git push -f*)", "Bash(git push origin main*)",
+      "Bash(git reset --hard*)", "Bash(git rebase*)",
+      "Bash(curl * | sh*)", "Bash(curl * | bash*)"
+    ]
+  }
 }
