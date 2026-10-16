@@ -11,6 +11,8 @@ brew "mole"
 brew "node"
 # Create, run, and share large language models (LLMs)
 brew "ollama", restart_service: :changed
+# AI coding agent, built for the terminal
+brew "opencode"
 # Fast, disk space efficient package manager
 brew "pnpm"
 # Framework for managing multi-language pre-commit hooks
@@ -37,12 +39,12 @@ cask "claude"
 cask "claude-code"
 # OpenAI's coding agent that runs in your terminal
 cask "codex"
+# Menu bar app for tracking agentic coding limits and usage
+cask "codexbar"
 # Tool to run Windows software
 cask "crossover"
 # Voice and text chat software
 cask "discord"
-# App to build and share containerised applications and microservices
-cask "docker-desktop"
 # Assign keys, and then decorate and label them
 cask "elgato-stream-deck"
 # Flip clock screensaver
@@ -55,6 +57,8 @@ cask "google-chrome"
 cask "google-drive"
 # GameStream client
 cask "moonlight"
+# Replacement for Docker Desktop
+cask "orbstack"
 # CPAP Analysis Reporter
 cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas
@@ -63,6 +67,8 @@ cask "rectangle"
 cask "spotify"
 # Mesh VPN based on WireGuard
 cask "tailscale-app"
+# Desktop application for Unsloth Studio
+cask "unsloth"
 # Open-source code editor
 cask "visual-studio-code"
 # Native desktop client for WhatsApp
