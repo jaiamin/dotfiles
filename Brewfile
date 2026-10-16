@@ -6,6 +6,8 @@ brew "gh"
 brew "git-lfs"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
+# Simple terminal UI for git commands
+brew "lazygit"
 # Mac App Store command-line interface
 brew "mas"
 # Deep clean and optimize your Mac
