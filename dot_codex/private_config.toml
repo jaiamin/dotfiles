@@ -13,3 +13,6 @@ url = "https://mcp.context7.com/mcp"
 [mcp_servers.playwright]
 command = "npx"
 args = ["-y", "@playwright/mcp@latest"]
+
+[desktop]
+followUpQueueMode = "steer"

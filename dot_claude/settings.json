@@ -1,3 +1,7 @@
 {
-  "theme": "auto"
+  "model": "sonnet",
+  "theme": "auto",
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true
+  }
 }
