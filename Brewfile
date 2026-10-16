@@ -5,6 +5,8 @@ brew "chezmoi"
 brew "gh"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
+# Mac App Store command-line interface
+brew "mas"
 # Deep clean and optimize your Mac
 brew "mole"
 # Open-source, cross-platform JavaScript runtime environment
@@ -19,8 +21,6 @@ brew "pnpm"
 brew "pre-commit"
 # Cross-shell prompt for astronauts
 brew "starship"
-# Terminal multiplexer
-brew "tmux"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Internet file retriever
@@ -36,7 +36,7 @@ cask "chatgpt"
 # Anthropic's official Claude AI desktop app
 cask "claude"
 # Terminal-based AI coding assistant
-cask "claude-code"
+cask "claude-code@latest"
 # OpenAI's coding agent that runs in your terminal
 cask "codex"
 # Menu bar app for tracking agentic coding limits and usage
@@ -77,30 +77,12 @@ cask "whatsapp"
 cask "wispr-flow"
 # Video communication and virtual meeting platform
 cask "zoom"
-vscode "anthropic.claude-code"
-vscode "charliermarsh.ruff"
-vscode "docker.docker"
-vscode "github.github-vscode-theme"
-vscode "ms-azuretools.vscode-containers"
-vscode "ms-azuretools.vscode-docker"
-vscode "ms-python.debugpy"
-vscode "ms-python.isort"
-vscode "ms-python.python"
-vscode "ms-python.vscode-pylance"
-vscode "ms-python.vscode-python-envs"
-vscode "ms-toolsai.jupyter"
-vscode "ms-toolsai.jupyter-keymap"
-vscode "ms-toolsai.jupyter-renderers"
-vscode "ms-toolsai.vscode-jupyter-cell-tags"
-vscode "ms-toolsai.vscode-jupyter-slideshow"
-vscode "ms-vscode-remote.remote-containers"
-vscode "ms-vscode-remote.remote-ssh"
-vscode "ms-vscode-remote.remote-ssh-edit"
-vscode "ms-vscode-remote.remote-wsl"
-vscode "ms-vscode.remote-explorer"
-vscode "openai.chatgpt"
-vscode "openai.codex-audio"
-vscode "pkief.material-icon-theme"
-vscode "shd101wyy.markdown-preview-enhanced"
-vscode "tamasfe.even-better-toml"
-vscode "usernamehw.errorlens"
+mas "Amphetamine", id: 937984704
+mas "GarageBand", id: 682658836
+mas "iMovie", id: 408981434
+mas "Keynote", id: 409183694
+mas "Noir", id: 1592917505
+mas "Numbers", id: 409203825
+mas "Pages", id: 409201541
+mas "uBlock Origin Lite", id: 6745342698
+mas "Xcode", id: 497799835
