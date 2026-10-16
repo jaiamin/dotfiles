@@ -80,7 +80,6 @@ cask "wispr-flow"
 # Video communication and virtual meeting platform
 cask "zoom"
 mas "Amphetamine", id: 937984704
-mas "GarageBand", id: 682658836
 mas "iMovie", id: 408981434
 mas "Keynote", id: 409183694
 mas "Noir", id: 1592917505
