@@ -23,6 +23,8 @@ brew "pnpm"
 brew "pre-commit"
 # Cross-shell prompt for astronauts
 brew "starship"
+# Upgrade all the things
+brew "topgrade"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Internet file retriever
