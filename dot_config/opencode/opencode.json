@@ -21,13 +21,15 @@
     "doom_loop": "ask",
     "read": {
       "*": "allow",
-      "*.env*": "deny",
+      "*.env": "allow",
+      "*.env.*": "allow",
+      "*.env*": "allow",
       "~/.ssh/**": "deny"
     },
     "bash": {
       "*": "allow",
-      "rm -rf*": "deny", "rm -fr*": "deny", "sudo *": "deny",
-      "git push*": "deny", "git reset*": "deny", "git clean*": "deny", "git rebase*": "deny"
+      "rm -rf*": "ask", "rm -fr*": "ask", "sudo *": "deny",
+      "git push*": "ask", "git reset*": "ask", "git clean*": "ask", "git rebase*": "ask"
     },
     "playwright_browser_evaluate": "ask",
     "playwright_browser_run_code": "ask",

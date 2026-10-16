@@ -1,6 +1,7 @@
 approval_policy = "on-request"
-approvals_reviewer = "auto_review"
+approvals_reviewer = "user"
 sandbox_mode = "workspace-write"
+web_search = "live"
 
 [sandbox_workspace_write]
 network_access = true
@@ -15,6 +16,9 @@ screen_reader_detection_done = true
 trust_level = "trusted"
 
 [projects."/Users/jaiamin/Projects/swarm"]
+trust_level = "trusted"
+
+[projects."/Users/jaiamin/Projects/mc-agent"]
 trust_level = "trusted"
 
 [mcp_servers.context7]
