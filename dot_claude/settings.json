@@ -1,8 +1,10 @@
 {
-  "model": "sonnet",
-  "theme": "auto",
+  "env": {
+    "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE": "1"
+  },
+  "model": "opus",
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true
   },
-  "env": { "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE": "1" }
+  "theme": "auto"
 }
