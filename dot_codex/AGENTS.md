@@ -1,37 +1,40 @@
 # Global instructions
 
-## How to work
-- Read the relevant code before changing it. Follow the existing style and patterns.
-- Stay focused on the task. Don't refactor unrelated code.
-- Prefer simple, boring solutions. Small, well-known dependencies are fine; list them in the PR. Ask before adding anything heavy.
-
 ## Scale the process to the task
-- Small (a few files, clear goal): just do it. Use tdd for logic. No spec, no questions.
-- Medium (a feature, some unknowns): short plan, then implement → code-review.
-- Large (multiple modules or days): to-spec → to-tickets → implement-spec or an agent team. Independent tickets, each in its own worktree.
-- Don't over-engineer small work. Don't under-plan large work.
+- Small (a few files, clear goal): just do it, with tdd for logic. No spec, no questions.
+- Medium (a feature with unknowns): short plan → implement → code-review.
+- Large (multiple modules or days): to-spec → to-tickets → implement-spec or an agent team, one worktree per ticket.
+- Match effort to size: don't over-engineer small work or under-plan large work.
 
 ## Autonomy
-- Make sensible decisions yourself and note assumptions in the PR description.
-- Only stop to ask me about: product direction, irreversible or destructive actions, spending money, credentials.
+- Decide yourself; record assumptions in the PR description.
+- Ask me only about product direction, destructive or irreversible actions, spending money, or credentials.
 - Use grill-me only when requirements are genuinely ambiguous.
-- When blocked, try another approach before asking. If you stop partway, leave a handoff note.
+- When blocked, try another approach first. If you stop partway, leave a handoff note.
 
-## Verify
-- Run the tests, linter, or app before saying it's done. Iterate until CI passes.
-- If you couldn't verify something, say so plainly. Never claim success you didn't confirm.
+## Scope
+- Change only what the task needs. Note unrelated issues in the PR instead of fixing them.
+- Prefer simple solutions. Small, well-known dependencies are fine (list them in the PR); ask before adding heavy ones.
+
+## Definition of done
+- Tests, linter, and type checks pass locally, and CI passes on the PR.
+- UI changes checked in a browser (agent-browser).
+- Report anything you couldn't verify. Never claim success you didn't confirm.
 
 ## Git
-- Work on a branch (one per task or worktree). Commit freely there.
-- Push your branch and open a PR when done. Never push to main, merge, or force-push.
+- One branch per task or worktree; commit freely there.
+- When done, push the branch and open a PR. Never push to main, merge, or force-push.
+- Exception: repos whose AGENTS.md says "This is a prototype." may commit to main.
+- Commits: Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`), imperative subject, body only for a non-obvious "why".
 
 ## Safety
-- Never commit or print secrets. Never touch .env files unless asked.
-- No destructive commands (rm -rf, dropping data, rewriting git history) without asking.
+- Never read, print, or commit secrets or .env files; use .env.example for templates.
+- Ask before destructive commands (rm -rf, dropping data, rewriting history).
 
 ## Environment
-- macOS. Python via uv (`uv run`, `uv add`), never pip. Node via Homebrew.
+- macOS. Python: uv only (`uv run`, `uv add`), never pip. Node via Homebrew.
+- Project-specific commands live in each repo's AGENTS.md; follow them over these defaults.
 
 ## Communication
-- Be concise and honest. Lead with the result, then anything I need to decide.
-- When you make a non-obvious choice, explain it in one line so I learn from it.
+- Be concise and honest: result first, then what I need to decide.
+- Explain non-obvious choices in one line so I learn from them.
