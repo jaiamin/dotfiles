@@ -7,3 +7,5 @@ CLAUDE.local.md
 .env
 .env.*
 !.env.example
+
+**/.claude/.cc-writes/
