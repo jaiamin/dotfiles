@@ -1,5 +1,7 @@
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
+# Play, record, convert, and stream select audio and video codecs
+brew "ffmpeg"
 # GitHub command-line tool
 brew "gh"
 # Git extension for versioning large files
