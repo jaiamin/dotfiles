@@ -10,18 +10,27 @@
     },
     "playwright": {
       "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest"]
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--isolated"]
     }
   },
   "permission": {
     "edit": "allow",
     "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": "ask",
+    "doom_loop": "ask",
+    "read": {
+      "*": "allow",
+      "*.env*": "deny",
+      "~/.ssh/**": "deny"
+    },
     "bash": {
       "*": "allow",
-      "rm -rf*": "deny", "sudo *": "deny",
-      "git push --force*": "deny", "git push -f*": "deny", "git push origin main*": "deny",
-      "git reset --hard*": "deny", "git rebase*": "deny",
-      "curl * | sh*": "deny", "curl * | bash*": "deny"
-    }
+      "rm -rf*": "deny", "rm -fr*": "deny", "sudo *": "deny",
+      "git push*": "deny", "git reset*": "deny", "git clean*": "deny", "git rebase*": "deny"
+    },
+    "playwright_browser_evaluate": "ask",
+    "playwright_browser_run_code": "ask",
+    "playwright_browser_file_upload": "ask"
   }
 }
