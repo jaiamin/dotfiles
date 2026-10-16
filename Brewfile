@@ -3,6 +3,8 @@ tap "stablyai/orca", trusted: { casks: ["orca"] }
 brew "chezmoi"
 # GitHub command-line tool
 brew "gh"
+# Git extension for versioning large files
+brew "git-lfs"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
 # Mac App Store command-line interface
