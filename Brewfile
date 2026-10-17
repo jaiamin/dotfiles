@@ -1,4 +1,8 @@
 tap "jaiamin/aix"
+# Open-source, cross-platform JavaScript runtime environment
+brew "node"
+# Browser automation CLI for AI agents
+brew "agent-browser"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Play, record, convert, and stream select audio and video codecs
@@ -15,8 +19,6 @@ brew "lazygit"
 brew "mas"
 # Deep clean and optimize your Mac
 brew "mole"
-# Open-source, cross-platform JavaScript runtime environment
-brew "node"
 # Create, run, and share large language models (LLMs)
 brew "ollama", restart_service: :changed
 # AI coding agent, built for the terminal
