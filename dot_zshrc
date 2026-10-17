@@ -1,6 +1,8 @@
-eval "$(starship init zsh)"
-source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+export HOMEBREW_BUNDLE_FILE="$HOME/Brewfile"
+
+command -v starship >/dev/null && eval "$(starship init zsh)"
+source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null
 
 # aix project
-eval "$(aix init zsh)"
+command -v aix >/dev/null && eval "$(aix init zsh)"
