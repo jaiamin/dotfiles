@@ -3,7 +3,6 @@
     "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE": "1"
   },
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "Edit",
       "Write",
@@ -22,7 +21,13 @@
       "Bash(git reset *)",
       "Bash(git clean *)",
       "Bash(git rebase *)"
-    ]
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "opus",
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true,
+    "ralph-loop@anthropic-plugin-directory": true
   },
   "sandbox": {
     "enabled": true,
@@ -31,11 +36,10 @@
     "allowUnsandboxedCommands": true,
     "network": {
       "allowLocalBinding": true
-    }
-  },
-  "model": "opus",
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true
+    },
+    "excludedCommands": [
+      "git init *"
+    ]
   },
   "theme": "auto"
 }
