@@ -1,3 +1,4 @@
+tap "jaiamin/aix"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Play, record, convert, and stream select audio and video codecs
@@ -36,6 +37,8 @@ brew "wget"
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
+# Turn plain English into shell commands with Apple Intelligence
+brew "jaiamin/aix/aix", trusted: true
 # 3D creation suite
 cask "blender"
 # OpenAI's official ChatGPT desktop app
