@@ -4,14 +4,7 @@
   "autoupdate": false,
   "share": "disabled",
   "mcp": {
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp"
-    },
-    "playwright": {
-      "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest", "--isolated"]
-    }
+    "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp" }
   },
   "permission": {
     "edit": "allow",
@@ -21,18 +14,15 @@
     "doom_loop": "ask",
     "read": {
       "*": "allow",
-      "*.env": "allow",
-      "*.env.*": "allow",
-      "*.env*": "allow",
+      "*.env": "deny", "*.env.*": "deny", "*.env.example": "allow",
       "~/.ssh/**": "deny"
     },
     "bash": {
       "*": "allow",
-      "rm -rf*": "ask", "rm -fr*": "ask", "sudo *": "deny",
-      "git push*": "ask", "git reset*": "ask", "git clean*": "ask", "git rebase*": "ask"
-    },
-    "playwright_browser_evaluate": "ask",
-    "playwright_browser_run_code": "ask",
-    "playwright_browser_file_upload": "ask"
+      "sudo *": "deny",
+      "git push --force*": "deny", "git push -f*": "deny", "git push origin main*": "deny",
+      "rm -rf*": "ask", "rm -fr*": "ask",
+      "git reset --hard*": "ask", "git clean*": "ask", "git rebase*": "ask"
+    }
   }
 }

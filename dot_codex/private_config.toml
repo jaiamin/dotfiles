@@ -24,16 +24,5 @@ trust_level = "trusted"
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
 
-[mcp_servers.playwright]
-command = "npx"
-args = ["-y", "@playwright/mcp@latest", "--isolated"]
-default_tools_approval_mode = "writes"
-
-[mcp_servers.playwright.tools.browser_evaluate]
-approval_mode = "prompt"
-
-[mcp_servers.playwright.tools.browser_run_code]
-approval_mode = "prompt"
-
 [desktop]
 followUpQueueMode = "steer"

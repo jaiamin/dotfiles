@@ -2,16 +2,17 @@
 
 ## Scale the process to the task
 - Small (a few files, clear goal): just do it, with tdd for logic. No spec, no questions.
-- Medium (a feature with unknowns): short plan → implement → code-review.
-- Large (multiple modules or days): to-spec → to-tickets → implement-spec or an agent team, one worktree per ticket.
+- Medium (a feature with unknowns): short plan → build → code-review.
+- Large (multiple modules or days): stop and tell me it's large, with a 3–5 line plan. I'll run /to-spec → /to-tickets → /implement-spec.
 - Match effort to size: don't over-engineer small work or under-plan large work.
 
 ## Autonomy
 - Decide yourself; record assumptions in the PR description.
 - Ask me only about product direction, destructive or irreversible actions, spending money, or credentials.
-- Use grill-me only when requirements are genuinely ambiguous.
-- When blocked, try another approach first. If you stop partway, leave a handoff note.
-- Keep work resumable by any agent: commit and push often, keep the ticket's GitHub issue status current, and update HANDOFF.md (done / in progress / next / gotchas) when you finish or stop.
+- If requirements are genuinely ambiguous, ask me to run /grill-me instead of guessing.
+- When blocked, try another approach first.
+- Other agents may be working in parallel: stay inside your own branch/worktree.
+- Keep work resumable by any agent: commit and push often, keep the ticket's GitHub issue current, and update HANDOFF.md (done / in progress / next / gotchas) when you finish or stop.
 
 ## Scope
 - Change only what the task needs. Note unrelated issues in the PR instead of fixing them.

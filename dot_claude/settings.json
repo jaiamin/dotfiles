@@ -2,44 +2,31 @@
   "env": {
     "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE": "1"
   },
-  "permissions": {
-    "allow": [
-      "Edit",
-      "Write",
-      "WebFetch",
-      "WebSearch",
-      "mcp__context7"
-    ],
-    "deny": [
-      "Read(~/.ssh/**)",
-      "Bash(sudo *)"
-    ],
-    "ask": [
-      "Bash(git push*)",
-      "Bash(rm -rf *)",
-      "Bash(rm -fr *)",
-      "Bash(git reset *)",
-      "Bash(git clean *)",
-      "Bash(git rebase *)"
-    ],
-    "defaultMode": "auto"
-  },
-  "model": "opus",
+  "model": "sonnet",
+  "theme": "auto",
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true,
     "ralph-loop@anthropic-plugin-directory": true
+  },
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": ["Edit", "Write", "WebFetch", "WebSearch", "mcp__context7"],
+    "deny": [
+      "Read(~/.ssh/**)", "Read(./.env*)", "Read(**/.env*)",
+      "Bash(sudo *)",
+      "Bash(git push --force*)", "Bash(git push -f*)", "Bash(git push origin main*)"
+    ],
+    "ask": [
+      "Bash(rm -rf *)", "Bash(rm -fr *)",
+      "Bash(git reset --hard*)", "Bash(git clean *)", "Bash(git rebase *)"
+    ]
   },
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
     "autoAllowBashIfSandboxed": false,
     "allowUnsandboxedCommands": true,
-    "network": {
-      "allowLocalBinding": true
-    },
-    "excludedCommands": [
-      "git init *"
-    ]
-  },
-  "theme": "auto"
+    "network": { "allowLocalBinding": true },
+    "excludedCommands": ["git init *"]
+  }
 }
