@@ -57,16 +57,10 @@ cask "codexbar"
 cask "crossover"
 # Voice and text chat software
 cask "discord"
-# Assign keys, and then decorate and label them
-cask "elgato-stream-deck"
-# Flip clock screensaver
-cask "fliqlo"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
 # Web browser
 cask "google-chrome"
-# Client for the Google Drive storage service
-cask "google-drive"
 # GameStream client
 cask "moonlight"
 # Replacement for Docker Desktop
