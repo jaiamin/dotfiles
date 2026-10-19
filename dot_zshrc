@@ -1,4 +1,4 @@
-export HOMEBREW_BUNDLE_FILE="$HOME/Brewfile"
+export HOMEBREW_BUNDLE_FILE="$HOME/.local/share/chezmoi/Brewfile"
 
 command -v starship >/dev/null && eval "$(starship init zsh)"
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
