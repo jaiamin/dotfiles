@@ -13,7 +13,7 @@
     "allow": ["Edit", "Write", "WebFetch", "WebSearch"],
     "deny": [
       "Read(~/.ssh/**)", "Read(.env*)", "Read(!.env.example)",
-      "Bash(sudo *)",
+      "Bash(sudo *)", "Read(~/.config/gh/**)",
       "Bash(git push --force*)", "Bash(git push -f*)", "Bash(git push origin main*)"
     ],
     "ask": [
