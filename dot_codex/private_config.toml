@@ -21,8 +21,5 @@ trust_level = "trusted"
 [projects."/Users/jaiamin/Projects/mc-agent"]
 trust_level = "trusted"
 
-[mcp_servers.context7]
-url = "https://mcp.context7.com/mcp"
-
 [desktop]
 followUpQueueMode = "steer"
