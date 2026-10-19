@@ -10,9 +10,9 @@
   },
   "permissions": {
     "defaultMode": "auto",
-    "allow": ["Edit", "Write", "WebFetch", "WebSearch", "mcp__context7"],
+    "allow": ["Edit", "Write", "WebFetch", "WebSearch"],
     "deny": [
-      "Read(~/.ssh/**)", "Read(./.env*)", "Read(**/.env*)",
+      "Read(~/.ssh/**)", "Read(.env*)", "Read(!.env.example)",
       "Bash(sudo *)",
       "Bash(git push --force*)", "Bash(git push -f*)", "Bash(git push origin main*)"
     ],
