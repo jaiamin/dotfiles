@@ -1,11 +1,30 @@
 #!/bin/bash
-# Re-runs whenever this file changes. Edit the list here to add or remove skills.
+# Re-runs whenever this file changes. Edit the lists here to add or remove skills.
+set -euo pipefail
 eval "$(/opt/homebrew/bin/brew shellenv)"
-A="-g -a claude-code -a codex -a opencode -y"
-npx skills add mattpocock/skills $A --skill grill-me --skill grilling \
+
+A=(-g -a claude-code -a codex -a opencode -y)
+add() { npx --yes skills@latest add "$@" "${A[@]}"; }
+
+# Workflow: align, plan, build, review, debug
+add mattpocock/skills \
+  --skill setup-matt-pocock-skills \
+  --skill grill-me --skill grill-with-docs --skill grilling \
   --skill to-spec --skill to-tickets --skill implement --skill implement-spec \
-  --skill setup-matt-pocock-skills --skill tdd --skill code-review \
-  --skill diagnosing-bugs --skill prototype --skill handoff --skill codebase-design \
-  --skill improve-codebase-architecture --skill teach --skill retro
-npx skills add anthropics/skills $A --skill frontend-design
-npx skills add vercel-labs/agent-browser $A
+  --skill tdd --skill code-review --skill diagnosing-bugs \
+  --skill codebase-design --skill improve-codebase-architecture \
+  --skill prototype --skill handoff --skill retro --skill teach
+
+# Frontend: React, components, UI design
+add vercel-labs/agent-skills \
+  --skill vercel-react-best-practices --skill vercel-composition-patterns \
+  --skill web-design-guidelines
+add shadcn-ui/ui --skill shadcn
+add pbakaus/impeccable --skill impeccable
+
+# Browser testing
+add vercel-labs/agent-browser
+
+# Current library docs
+add upstash/context7 --skill find-docs
+
