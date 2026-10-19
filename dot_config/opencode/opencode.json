@@ -4,7 +4,10 @@
   "autoupdate": false,
   "share": "disabled",
   "permission": {
-    "edit": "allow",
+    "edit": {
+      "*": "allow",
+      "*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"
+    },
     "webfetch": "allow",
     "websearch": "allow",
     "external_directory": "ask",
