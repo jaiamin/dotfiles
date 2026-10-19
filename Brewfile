@@ -5,6 +5,8 @@ brew "node"
 brew "agent-browser"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
+# Manage AI coding skills and documentation context
+brew "ctx7"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
 # GitHub command-line tool
