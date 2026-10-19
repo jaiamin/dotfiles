@@ -1,7 +1,6 @@
 #!/bin/bash
-# Re-runs whenever this file changes. Edit the lists here to add or remove skills.
+# Global agent skills.
 set -euo pipefail
-eval "$(/opt/homebrew/bin/brew shellenv)"
 
 A=(-g -a claude-code -a codex -a opencode -y)
 add() { npx --yes skills@latest add "$@" "${A[@]}"; }
