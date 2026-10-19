@@ -15,7 +15,7 @@
     "read": {
       "*": "allow",
       "*.env": "deny", "*.env.*": "deny", "*.env.example": "allow",
-      "~/.ssh/**": "deny"
+      "~/.ssh/**": "deny", "~/.config/gh/**": "deny"
     },
     "bash": {
       "*": "allow",
