@@ -1,31 +1,29 @@
 # dotfiles
 
-Two environments, one repository:
-
-- **Mac:** hands-on coding, notebooks, learning, and agents with interactive permissions. Managed by chezmoi.
-- **OrbStack:** autonomous development in an isolated Linux machine. Follow [the Linux setup](sandbox/README.md).
+- **Mac:** learning, notebooks, and hands-on development.
+- **OrbStack:** autonomous agent development. See [setup](sandbox/README.md).
 
 ## New Mac
 
-These instructions assume Apple Silicon. Install [Homebrew](https://brew.sh), then:
+Install [Homebrew](https://brew.sh), then:
 
 ```sh
 brew install chezmoi gh
-gh auth login --hostname github.com --git-protocol https
+gh auth login
 chezmoi init --apply jaiamin
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Open a new terminal, then:
+Open a new terminal:
 
 ```sh
 agent-browser install
 bash "$(chezmoi source-path)/skills.sh"
 ```
 
-Launch `claude`, `codex`, and `opencode` once to sign in. Sign into desktop apps as needed.
+Launch Claude, Codex, and OpenCode to sign in.
 
-## Updates
+## Update
 
 ```sh
 chezmoi update
@@ -33,15 +31,16 @@ brew update
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Rerun `skills.sh` when changing or updating skills. Homebrew manages the apps and tools listed in `Brewfile`.
+Rerun `skills.sh` when updating skills.
 
-To edit tracked configuration, work in `$(chezmoi source-path)`, inspect `chezmoi diff`, then run `chezmoi apply`. Review and commit/push changes deliberately. If you edited a deployed file instead, use `chezmoi re-add <path>` first. Chezmoi currently auto-commits and auto-pushes changes made through its commands.
+## Edit
 
-## Where things live
+Edit files in `chezmoi source-path`, then run `chezmoi diff` and `chezmoi apply`. Commit and push changes.
 
-- `Brewfile`: Mac apps and tools. `Brewfile.linux`: shared Linux CLI tools.
-- `dot_*`: Mac configuration. `dot_codex/AGENTS.md`: shared agent instructions.
-- `skills.sh`: global skills for all three agents.
-- `sandbox/`: Linux overrides, apply script, and rebuild instructions.
+- `Brewfile`: Mac apps and tools.
+- `Brewfile.linux`: Linux tools.
+- `dot_codex/AGENTS.md`: shared agent instructions.
+- `sandbox/`: Linux settings and setup.
+- `skills.sh`: shared skills.
 
-Chezmoi creates the Mac instruction symlinks. Linux uses the apply script instead of `chezmoi apply`. Logins and secrets stay outside this repository.
+Mac configuration assumes Apple Silicon. Keep credentials out of Git.
