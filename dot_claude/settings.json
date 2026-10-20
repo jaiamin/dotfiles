@@ -9,8 +9,8 @@
     "ralph-loop@anthropic-plugin-directory": true
   },
   "permissions": {
-    "defaultMode": "auto",
-    "allow": ["Edit", "Write", "WebFetch", "WebSearch"],
+    "defaultMode": "default",
+    "allow": ["WebFetch", "WebSearch"],
     "deny": [
       "Read(~/.ssh/**)", "Read(**/.env)", "Read(**/.env.local)", "Read(**/.env.*.local)",
       "Read(**/.env.development)", "Read(**/.env.production)",
@@ -26,8 +26,7 @@
     "enabled": true,
     "failIfUnavailable": true,
     "autoAllowBashIfSandboxed": false,
-    "allowUnsandboxedCommands": true,
-    "network": { "allowLocalBinding": true },
-    "excludedCommands": ["git init *"]
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": []
   }
 }

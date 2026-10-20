@@ -5,7 +5,7 @@
   "share": "disabled",
   "permission": {
     "edit": {
-      "*": "allow",
+      "*": "ask",
       "*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"
     },
     "webfetch": "allow",
@@ -18,7 +18,7 @@
       "~/.ssh/**": "deny", "~/.config/gh/**": "deny"
     },
     "bash": {
-      "*": "allow",
+      "*": "ask",
       "sudo *": "deny",
       "git push --force*": "deny", "git push -f*": "deny",
       "rm *": "ask",

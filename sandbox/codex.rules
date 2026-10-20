@@ -1,0 +1,7 @@
+prefix_rule(pattern = ["git", "push", "--force"], decision = "forbidden")
+prefix_rule(pattern = ["git", "push", "-f"], decision = "forbidden")
+prefix_rule(pattern = ["git", "reset", "--hard"], decision = "prompt")
+prefix_rule(pattern = ["git", "clean"], decision = "prompt")
+prefix_rule(pattern = ["git", "rebase"], decision = "prompt")
+prefix_rule(pattern = ["gh", "pr", "merge"], decision = "prompt")
+prefix_rule(pattern = ["gh", "repo", "delete"], decision = "prompt")
