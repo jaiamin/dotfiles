@@ -20,8 +20,8 @@
     "bash": {
       "*": "allow",
       "sudo *": "deny",
-      "git push --force*": "deny", "git push -f*": "deny", "git push origin main*": "deny",
-      "rm -rf*": "ask", "rm -fr*": "ask",
+      "git push --force*": "deny", "git push -f*": "deny",
+      "rm *": "ask",
       "git reset --hard*": "ask", "git clean*": "ask", "git rebase*": "ask"
     }
   }

@@ -15,8 +15,6 @@ brew "chezmoi"
 brew "ctx7"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
-# Play, record, convert, and stream select audio and video codecs
-brew "ffmpeg"
 # GitHub command-line tool
 brew "gh"
 # Distributed revision control system
@@ -38,7 +36,7 @@ brew "mas"
 # Deep clean and optimize your Mac
 brew "mole"
 # Create, run, and share large language models (LLMs)
-brew "ollama", restart_service: :changed
+brew "ollama"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
 # AI coding agent, built for the terminal
@@ -51,8 +49,6 @@ brew "prek"
 brew "starship"
 # Upgrade all the things
 brew "topgrade"
-# CLI tool that moves files or folder to the trash
-brew "trash"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Fish-like fast/unobtrusive autosuggestions for zsh

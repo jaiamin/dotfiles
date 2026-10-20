@@ -1,11 +1,23 @@
+# Brewfile lives in the chezmoi source
 export HOMEBREW_BUNDLE_FILE="$HOME/.local/share/chezmoi/Brewfile"
 
-command -v starship >/dev/null && eval "$(starship init zsh)"
-source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
-source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null
+# History: big, shared across tabs, no dupes.
+# Commands starting with a space aren't saved (useful for secrets).
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt share_history hist_ignore_all_dups hist_ignore_space
 
-# aix project
+# Tab completion for brew-installed tools (gh, just, chezmoi, uv...)
+fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
+autoload -Uz compinit && compinit
+
+# Prompt
+command -v starship >/dev/null && eval "$(starship init zsh)"
+
+# aix
 command -v aix >/dev/null && eval "$(aix init zsh)"
 
-# trash package
-export PATH=/opt/homebrew/opt/trash/bin:$PATH
+# Plugins (syntax highlighting must stay last)
+source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null
