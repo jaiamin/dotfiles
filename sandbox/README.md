@@ -1,27 +1,24 @@
-# Isolated agent workspace
+# OrbStack setup
 
-Run autonomous projects here; use the Mac for hands-on learning and small local work. Keep projects in Linux at `~/projects`. Do not enable Mac mounts, host integration, credential forwarding, or access to the Mac's Docker socket.
+Autonomous development runs here. Keep projects in `~/projects`.
 
-## 1. Create the machine | Mac
+## 1. Create | Mac
 
 ```sh
 orb create --isolated --isolate-network ubuntu:noble agents
-```
-
-Disable **Expose ports to LAN** in OrbStack. Enter Linux:
-
-```sh
 orb -m agents
 ```
 
-For a rebuild test, use `agents-test` instead of `agents` in the Mac commands. Keep the working machine until the test passes.
+Disable **Expose ports to LAN** in OrbStack. Keep Mac mounts and credential forwarding disabled.
 
-## 2. Install tools | Linux
+## 2. Install | Linux
 
 ```sh
 sudo apt-get update
 sudo apt-get install -y build-essential procps curl file git unzip
+
 NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
 echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
@@ -36,48 +33,39 @@ source ~/.bashrc
 npx --yes playwright install --with-deps chromium
 ```
 
-These are fresh-machine installation steps. Use the update section for an existing machine.
-
-## 3. Apply settings and sign in | Linux
+## 3. Configure | Linux
 
 ```sh
 bash ~/dotfiles/sandbox/apply.sh
 bash ~/dotfiles/skills.sh
-gh auth login --hostname github.com --git-protocol https
+gh auth login
 ```
 
-Launch `claude`, `codex`, and `opencode` separately and complete sign-in. Follow their terminal instructions if browser login cannot open automatically. Never copy Mac credential folders into Linux.
+Launch Claude, Codex, and OpenCode to sign in.
 
-The script installs Linux agent settings, Codex rules, Git settings/ignores, and shared instructions with the Linux supplement. It creates instruction symlinks and `~/projects`. Changed files are backed up under `~/.local/state/dotfiles/backups/`; credentials and projects are untouched. Do not run `chezmoi init --apply` here.
+`apply.sh` installs saved settings and instruction links, backs up replaced files, and creates `~/projects`. Do not apply the Mac chezmoi configuration here.
 
-## 4. Verify | Linux
+## 4. Check | Linux
 
 ```sh
 cd ~/dotfiles
-uname -s
 git config --global user.name
 git config --global user.email
 git hook list pre-commit
-gh auth status
-ls -l ~/.claude/CLAUDE.md ~/.config/opencode/AGENTS.md
 agent-browser open https://example.com
 agent-browser get title
 agent-browser close
 ```
 
-Expect Linux, your Git identity, a `gitleaks` hook, instruction symlinks, and `Example Domain`. If `git hook list` is unavailable, reopen the terminal and confirm `command -v git` points to Homebrew Git.
+Expect your Git identity, a `gitleaks` hook, and `Example Domain`.
 
-Start each agent in a project under `~/projects`. Confirm it loads the shared/Linux instructions and the expected permission mode. Have it make a small change, run tests, and start/test a local API before retiring the old machine. Automatic approval review may still pause on risky actions; instructions and command rules are guardrails, not guaranteed human approval gates.
-
-## 5. Connect Herdr | Mac
+## 5. Connect | Mac
 
 ```sh
 herdr machine add agents@orb
 ```
 
-Choose that machine for autonomous work. Confirm its terminal reports `Linux`.
-
-## Updates | Linux
+## Update | Linux
 
 ```sh
 cd ~/dotfiles
@@ -87,6 +75,8 @@ brew update
 brew bundle --file="$HOME/dotfiles/Brewfile.linux"
 ```
 
-Rerun `bash ~/dotfiles/skills.sh` when updating skills. Update standalone agents with their own updater. Edit saved settings in this repository, then rerun `apply.sh`; it replaces the managed files rather than merging local changes. Restart agent sessions after applying settings.
+Restart agents after applying settings. Rerun `skills.sh` when updating skills; update standalone agents through their own updater.
 
-Add project dependencies with `uv` or the project's JS package manager. Add shared CLI tools to `Brewfile.linux`. Install databases, Docker, and other infrastructure only when a project needs them. Before deleting any machine, push or back up its projects, unpushed commits, and other data you need.
+Edit saved settings in `~/dotfiles`, then rerun `apply.sh`. Install project dependencies locally with `uv` or the project's JS package manager.
+
+For rebuild testing, substitute `agents-test` in the Mac commands. Verify a small project before deleting the old machine, and preserve any unpushed work.
