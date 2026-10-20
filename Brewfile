@@ -1,4 +1,8 @@
 tap "jaiamin/aix"
+# Static analysis and lint tool, for (ba)sh scripts
+brew "shellcheck"
+# Static checker for GitHub Actions workflow files
+brew "actionlint"
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
 # Browser automation CLI for AI agents
@@ -15,6 +19,8 @@ brew "fd"
 brew "ffmpeg"
 # GitHub command-line tool
 brew "gh"
+# Distributed revision control system
+brew "git"
 # Git extension for versioning large files
 brew "git-lfs"
 # Audit git repos for secrets
@@ -39,8 +45,8 @@ brew "ripgrep"
 brew "opencode"
 # Fast, disk space efficient package manager
 brew "pnpm"
-# Framework for managing multi-language pre-commit hooks
-brew "pre-commit"
+# Fast Git hook manager written in Rust, drop-in alternative to pre-commit
+brew "prek"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Upgrade all the things

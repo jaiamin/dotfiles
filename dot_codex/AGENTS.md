@@ -44,6 +44,7 @@
 - Structural search or multi-file refactors: `ast-grep`.
 - Before using a library API you're unsure of or that may have changed, fetch current docs with `ctx7` (installed; never `npx ctx7`).
 - Check shell scripts with `shellcheck` and GitHub Actions workflows with `actionlint`.
+- Git hooks: use `prek`, never `pre-commit`. If a repo has `.pre-commit-config.yaml`, run `prek install` once; run all hooks with `prek run --all-files`.
 
 ## New projects (my repos)
 - Python: uv, ruff (lint + format), pytest, ty.
