@@ -16,3 +16,6 @@
 	prune = true
 [credential "https://github.com"]
    	helper = !/opt/homebrew/bin/gh auth git-credential
+[hook "gitleaks"]
+	event = pre-commit
+	command = gitleaks git --pre-commit --staged --redact --no-banner
