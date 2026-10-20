@@ -72,7 +72,7 @@ Expect your Git identity, a `gitleaks` hook, and `Example Domain`.
 ## 5. Connect | Mac
 
 ```sh
-herdr machine add agents@orb
+herdr machine add agents@orb --label "Agents (Orb)"
 ```
 
 ## Update | Linux
