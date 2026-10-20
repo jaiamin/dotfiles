@@ -3,18 +3,26 @@ tap "jaiamin/aix"
 brew "node"
 # Browser automation CLI for AI agents
 brew "agent-browser"
+# Code searching, linting, rewriting
+brew "ast-grep"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Manage AI coding skills and documentation context
 brew "ctx7"
+# Simple, fast and user-friendly alternative to find
+brew "fd"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
 # GitHub command-line tool
 brew "gh"
 # Git extension for versioning large files
 brew "git-lfs"
+# Audit git repos for secrets
+brew "gitleaks"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
+# Handy way to save and run project-specific commands
+brew "just"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Mac App Store command-line interface
@@ -23,6 +31,8 @@ brew "mas"
 brew "mole"
 # Create, run, and share large language models (LLMs)
 brew "ollama", restart_service: :changed
+# Search tool like grep and The Silver Searcher
+brew "ripgrep"
 # AI coding agent, built for the terminal
 brew "opencode"
 # Fast, disk space efficient package manager
@@ -33,6 +43,8 @@ brew "pre-commit"
 brew "starship"
 # Upgrade all the things
 brew "topgrade"
+# CLI tool that moves files or folder to the trash
+brew "trash"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Internet file retriever
