@@ -8,6 +8,3 @@ network_access = true
 
 [desktop]
 followUpQueueMode = "steer"
-
-[tui]
-screen_reader_detection_done = true
