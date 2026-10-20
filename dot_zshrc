@@ -6,3 +6,4 @@ source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2
 
 # aix project
 command -v aix >/dev/null && eval "$(aix init zsh)"
+export PATH=/opt/homebrew/opt/trash/bin:$PATH

@@ -34,8 +34,12 @@
 - Never read, print, or commit secrets or .env files; use .env.example for templates.
 - Ask before destructive commands (rm -rf, dropping data, rewriting history), global installs, or piping remote scripts to a shell (`curl | sh`).
 
-## Environment
+## Environment/Tools
+- Delete files with `trash`, never `rm`.
+- Run `gitleaks protect --staged` before every commit. Stop if it flags anything. Never write secrets to files. Read them from env vars.
 - macOS. Python: uv only (`uv run`, `uv add`), never pip. Node via Homebrew.
+- If a `justfile` exists, use its recipes for build, test, and lint. If not, create one for reusable commands.
+- Use `ast-grep` for structural search or multi-file refactors.
 - Project-specific commands live in each repo's AGENTS.md; follow them over these defaults.
 - Context7: use the installed `ctx7` command, never `npx ctx7`.
 
