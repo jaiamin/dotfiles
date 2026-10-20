@@ -1,4 +1,7 @@
 tap "jaiamin/aix"
+tap "docker/tap"
+# Isolated environments for autonomous coding agents
+cask "docker/tap/sbx"
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
@@ -75,8 +78,6 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
-# Replacement for Docker Desktop
-cask "orbstack"
 # CPAP Analysis Reporter
 cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas

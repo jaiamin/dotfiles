@@ -1,3 +1,6 @@
+# Available in interactive shells, including new panes of an existing Herdr server.
+export PATH="$HOME/.local/bin:$PATH"
+
 # Brewfile lives in the chezmoi source
 export HOMEBREW_BUNDLE_FILE="$HOME/.local/share/chezmoi/Brewfile"
 
