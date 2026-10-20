@@ -21,6 +21,8 @@ brew "git-lfs"
 brew "gitleaks"
 # Agent multiplexer that lives in your terminal
 brew "herdr"
+# Lightweight and flexible command-line JSON processor
+brew "jq"
 # Handy way to save and run project-specific commands
 brew "just"
 # Simple terminal UI for git commands
@@ -47,8 +49,6 @@ brew "topgrade"
 brew "trash"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
-# Internet file retriever
-brew "wget"
 # Fish-like fast/unobtrusive autosuggestions for zsh
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
