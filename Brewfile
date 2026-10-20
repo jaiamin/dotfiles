@@ -31,8 +31,6 @@ brew "jq"
 brew "just"
 # Simple terminal UI for git commands
 brew "lazygit"
-# Mac App Store command-line interface
-brew "mas"
 # Deep clean and optimize your Mac
 brew "mole"
 # Create, run, and share large language models (LLMs)
@@ -47,8 +45,6 @@ brew "pnpm"
 brew "prek"
 # Cross-shell prompt for astronauts
 brew "starship"
-# Upgrade all the things
-brew "topgrade"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Fish-like fast/unobtrusive autosuggestions for zsh
@@ -99,11 +95,3 @@ cask "whatsapp"
 cask "wispr-flow"
 # Video communication and virtual meeting platform
 cask "zoom"
-mas "Amphetamine", id: 937984704
-mas "iMovie", id: 408981434
-mas "Keynote", id: 409183694
-mas "Noir", id: 1592917505
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
-mas "uBlock Origin Lite", id: 6745342698
-mas "Xcode", id: 497799835
