@@ -31,6 +31,16 @@ curl -fsSL https://opencode.ai/install | bash
 source ~/.bashrc
 
 npx --yes playwright install --with-deps chromium
+
+browser_path="$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux*/chrome' -print -quit)"
+
+if [ -n "$browser_path" ] && [ -x "$browser_path" ]; then
+  mkdir -p ~/.agent-browser
+  jq -n --arg path "$browser_path" \
+    '{executablePath: $path}' > ~/.agent-browser/config.json
+else
+  echo "Browser binary not found. Check the installation output."
+fi
 ```
 
 ## 3. Configure | Linux
