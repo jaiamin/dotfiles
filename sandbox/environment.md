@@ -1,12 +1,8 @@
-## Isolated OrbStack environment overrides
+## Docker Sandbox environment
 
-- This configuration is explicitly for the isolated OrbStack development machine.
-- Use Linux commands.
-- Installing development dependencies inside this machine is authorized.
-- Use Homebrew for shared CLI tools and uv/pnpm for project dependencies.
-- Disposable generated build/cache files may be removed with rm.
-- Stay within the assigned project or worktree.
-- Never enable Mac mounts, host integration, or credential forwarding.
-- Ask before production changes, spending, credential scope changes,
-  destructive remote actions, or merging.
-- Never search for unrelated credentials.
+- This environment is explicitly an isolated Docker Sandbox.
+- Use Linux commands. Installing development tools inside this sandbox is authorized.
+- Keep project files and services inside the sandbox.
+- Never change host mounts, host policies, credential forwarding, or shared skills.
+- Use task branches and preserve other workers' changes.
+- Ask before production changes, spending, expanding credentials, destructive remote actions, or merging.
