@@ -1,0 +1,36 @@
+schemaVersion: "2"
+kind: mixin
+name: jai-dev
+args:
+  repo:
+    required: true
+    pattern: '^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$'
+  browser:
+    default: "false"
+    enum: ["false", "true"]
+  ref:
+    default: main
+environment:
+  variables:
+    DOTFILES_REPO: "${{ kit.args.repo }}"
+    DOTFILES_BROWSER: "${{ kit.args.browser }}"
+    DOTFILES_REF: "${{ kit.args.ref }}"
+agentInstructions:
+  content: |
+    Read /home/agent/.config/dotfiles/AGENTS.md before working.
+    This is an isolated Linux development sandbox; keep work inside it.
+setup:
+  install:
+    - user: "1000"
+      description: Configure Linux tools, instructions, Git, and the project
+      command: |
+        set -eu
+        export HOME=/home/agent
+        if [ ! -d "$HOME/.dotfiles/.git" ]; then
+          git clone --depth 1 --branch "$DOTFILES_REF" \
+            https://github.com/jaiamin/dotfiles.git "$HOME/.dotfiles"
+        fi
+        bash "$HOME/.dotfiles/sandbox/bootstrap.sh" "$DOTFILES_REPO"
+        if [ "$DOTFILES_BROWSER" = true ]; then
+          bash "$HOME/.dotfiles/sandbox/bootstrap.sh" --browser
+        fi
