@@ -18,6 +18,7 @@ args:
 kits:
   - source: ./.local/share/chezmoi/sandbox
     args:
+      agent: "${{ env.args.agent }}"
       repo: "${{ env.args.repo }}"
       browser: "${{ env.args.browser }}"
       ref: "${{ env.args.ref }}"
