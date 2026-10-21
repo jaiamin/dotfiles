@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Guest-only setup. Never replaces Docker-managed agent settings or auth files.
 set -euo pipefail
-if [[ ${DOTFILES_SANDBOX:-} != 1 || $(uname -s) != Linux || $HOME != /home/agent ]]; then
-  echo 'Run this through dev on your Mac, not directly on the Mac.' >&2; exit 1
+if [[ $(uname -s) != Linux || $HOME != /home/agent ]]; then
+  echo 'Run this inside a Docker Sandbox as agent, never on your Mac.' >&2; exit 1
 fi
 export PATH="$HOME/.local/bin:$PATH"
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -72,6 +72,14 @@ cat "$source_dir/dot_codex/AGENTS.md" "$source_dir/sandbox/environment.md" > "$H
 ln -sfn ../.config/dotfiles/AGENTS.md "$HOME/.claude/CLAUDE.md"
 ln -sfn ../.config/dotfiles/AGENTS.md "$HOME/.codex/AGENTS.md"
 ln -sfn ../dotfiles/AGENTS.md "$HOME/.config/opencode/AGENTS.md"
+# Load a separate OpenCode overlay without replacing Docker-managed config/auth.
+install -m 600 "$source_dir/sandbox/opencode.json" "$HOME/.config/dotfiles/opencode.json"
+# Expand HOME when each guest session starts, not while generating the file.
+# shellcheck disable=SC2016
+opencode_line='export OPENCODE_CONFIG="$HOME/.config/dotfiles/opencode.json"'
+if ! sudo grep -Fxq -- "$opencode_line" /etc/sandbox-persistent.sh 2>/dev/null; then
+  printf '\n%s\n' "$opencode_line" | sudo tee -a /etc/sandbox-persistent.sh >/dev/null
+fi
 install -m 644 "$source_dir/dot_config/git/ignore" "$HOME/.config/git/ignore"
 git config --global user.name "$(git config --file "$source_dir/dot_gitconfig" user.name)"
 git config --global user.email "$(git config --file "$source_dir/dot_gitconfig" user.email)"

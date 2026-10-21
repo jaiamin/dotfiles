@@ -21,7 +21,7 @@ agent-browser install
 bash "$(chezmoi source-path)/skills.sh"
 ```
 
-Launch the native agents to sign in. Complete the separate [sandbox setup](sandbox/README.md) once per Mac. Docker credentials and existing sandbox files are not synced by chezmoi.
+Launch native agents to sign in. Complete the separate [sandbox setup](sandbox/README.md) once per Mac. Credentials and sandbox files are not synced by chezmoi.
 
 ## Update
 
@@ -31,7 +31,7 @@ brew update
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Rerun `skills.sh` when updating skills, then `sbx skills import` for sandboxes. Reopening with `dev` refreshes shared instructions; it does not pull project changes or upgrade installed guest tools automatically.
+Rerun `skills.sh` when updating skills, then `sbx skills import`. Update existing sandboxes separately using the sandbox README; reopening does not update their tools, instructions, or projects.
 
 ## Edit
 
@@ -39,8 +39,7 @@ Edit in `chezmoi source-path`, review `chezmoi diff`, then `chezmoi apply`. Comm
 
 - `Brewfile`: Mac apps and tools.
 - `dot_codex/AGENTS.md`: shared agent instructions.
-- `dot_local/bin/executable_dev`: Mac sandbox launcher.
-- `sandbox/`: guest setup and instructions.
+- `sandbox/`: guest bootstrap, OpenCode overlay, and instructions.
 - `skills.sh`: shared skills.
 
-Mac configuration assumes Apple Silicon. Keep credentials out of Git.
+Mac configuration assumes Apple Silicon. Keep credentials out of Git. Run chezmoi only on the Mac; sandbox setup uses its own small bootstrap.

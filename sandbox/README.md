@@ -1,6 +1,6 @@
 # Docker Sandboxes
 
-One persistent sandbox per active project-agent combination. Projects and dependencies stay inside the sandbox; Mac project folders are not mounted. Requires current `sbx` with mountless creation support (0.42+).
+One persistent, mountless sandbox per active project and primary agent. Add another agent sandbox only when needed. Project files and dependencies stay in Linux. Requires current `sbx` with mountless creation support (0.42+).
 
 ## Once per Mac
 
@@ -17,68 +17,115 @@ sbx skills import --dry-run
 sbx skills import
 ```
 
-If policy was initialized previously, skip `policy init` and inspect `sbx policy ls --wide`. To intentionally replace the policy, `sbx policy reset` clears existing rules, stops running sandboxes, and lets you choose Balanced again.
+Skip `policy init` if already initialized; inspect `sbx policy ls --wide` instead. Balanced allows common development destinations and asks about unfamiliar ones. It does not promise zero network prompts.
 
-Docker uses your Mac GitHub CLI credential above. Use a repository-limited sandbox credential when stronger separation is needed. Keep production credentials out. Claude subscription users sign in with `/login` on first launch; do not set an Anthropic API key unless you want API billing. OpenCode providers have separate authentication requirements; select your intended provider and verify billing before using it.
+The GitHub command delegates your Mac GitHub CLI credential's permissions. Use repository-limited credentials when needed; keep production credentials out. Codex uses the host OAuth flow above. Claude subscription users use `/login` on first launch; do not add an Anthropic API key unless you want API billing. OpenCode needs its own supported provider configuration; do not assume it inherits Claude or ChatGPT subscriptions.
 
-## Work
+## Create a project environment
 
-Run on the Mac, including in a local Herdr pane:
+On the Mac, create ONE of these as needed. Do not add a workspace path or `.`:
 
 ```sh
-dev jaiamin/bignums claude
-# In another pane, only when needed:
-dev jaiamin/bignums codex
-dev jaiamin/bignums opencode
+sbx create --name bignums-claude --cpus 4 --memory 4g claude
+# Alternatives, only when needed:
+sbx create --name bignums-codex --cpus 4 --memory 4g codex
+sbx create --name bignums-opencode --cpus 4 --memory 4g opencode
 ```
 
-The name includes owner, repository, and agent: `jaiamin-bignums-claude`. First use provisions and clones; later uses reopen the same sandbox. Each starts with 4 CPUs and a 4 GiB memory limit. Do not run multiple writers in the same checkout; use task worktrees. Separate sandboxes exchange committed branches through GitHub.
+Four GiB is a starting limit; increase it for demanding builds, browsers, or databases. These are independent environments, not three required installations for every project.
 
-Herdr's **Local** label refers to its Mac server, not the execution boundary. Name the workspace `bignums · Claude · Sandbox`; `dev` sets the wrapper hint so Herdr can recognize the sandboxed agent. Herdr is not installed in each sandbox. SSH is only needed for previews, remote editors, or direct inspection.
+Open the chosen sandbox from your Mac:
 
-`dev` refuses existing sandboxes it did not create. It never deletes/recreates a sandbox, changes network policy, pulls your project, or copies Mac authentication directories. It refreshes shared instructions on reopen. Git identity and a portable Gitleaks hook are installed; existing project hooks are preserved. Keep secret scanning in project CI too.
+```sh
+ssh bignums-claude.sbx
+```
+
+Inside Linux, clone dotfiles and bootstrap the project:
+
+```sh
+git clone https://github.com/jaiamin/dotfiles.git ~/.dotfiles
+bash ~/.dotfiles/sandbox/bootstrap.sh jaiamin/bignums
+exit
+```
+
+Before this branch is merged, add `--branch setup/docker-sandboxes` to the dotfiles clone command. Replace `jaiamin/bignums` with an existing repository. For a new project, create an empty GitHub repository first; do not initialize an unrelated checkout in the workspace before running bootstrap.
+
+Bootstrap installs common Linux tools, instructions, Git identity, a portable Gitleaks hook, and the OpenCode overlay. Existing project hooks and Docker-managed agent configuration/authentication are preserved. Run it once in each new sandbox; never run chezmoi apply there.
+
+## Work in Herdr
+
+Run Herdr on the Mac. Use one workspace per project and run the matching command in a pane:
+
+```sh
+HERDR_AGENT=claude sbx run --name bignums-claude
+HERDR_AGENT=codex sbx run --name bignums-codex
+HERDR_AGENT=opencode sbx run --name bignums-opencode
+```
+
+Run only commands for sandboxes you created. These reopen existing sandboxes. Herdr's Local label refers to its Mac server, not where the agent executes. Agent status through wrappers is best effort. No Herdr server is required inside each sandbox.
+
+Claude and Codex use Docker's default autonomous launch modes. OpenCode loads `sandbox/opencode.json` through the bootstrap's guest-only environment setting. Native Mac permissions stay supervised. Project settings can change agent behavior. Instructions to ask about consequential actions are behavioral rules, not an enforced approval gateway; credentials and repository protections remain important.
+
+Use task branches/worktrees for concurrent workers. Separate mountless sandboxes have separate clones; exchange committed branches through GitHub. Start with one primary agent per project rather than creating a fleet.
 
 ## Browser and preview
 
-Install browser testing only where needed:
+Inside the chosen sandbox, only for UI projects:
 
 ```sh
-dev jaiamin/bignums claude --browser
+bash ~/.dotfiles/sandbox/bootstrap.sh --browser
 ```
 
-This adds agent-browser, Playwright Chromium, and its Linux dependencies. The agent can run the browser setup itself using the command in its environment instructions. Headless testing runs inside the sandbox.
+This installs agent-browser and Playwright Chromium, and explicitly sets the browser executable path for Linux ARM64. Start the dev server on `0.0.0.0`, for example with the project's `--host 0.0.0.0` option.
 
-For a server listening on sandbox localhost:5173, run in another Mac pane:
+On the Mac:
 
 ```sh
-ssh -N -L 127.0.0.1:5173:127.0.0.1:5173 jaiamin-bignums-claude.sbx
+sbx ports bignums-claude --publish 5173:5173
+open http://localhost:5173
 ```
 
-Open http://localhost:5173 on the Mac. Change both port numbers for another service.
+Use another host port for another project, such as `5174:5173`. Port publishing persists across restarts. SSH tunneling is optional, not needed for this workflow.
 
 ## Check and maintain
 
+Before merging dotfiles, test one fresh sandbox: bootstrap, agent login, a real project test/build, and browser preview if applicable. Check Herdr's working/idle display, stop the sandbox, reopen it, and verify files and settings persisted.
+
+Inside Linux, basic checks are:
+
+```sh
+cd /home/agent/workspace
+git status --short
+git config --global user.name
+gh api user --jq .login
+gitleaks version
+```
+
+For OpenCode, verify `opencode debug config` shows the intended permissions. For UI projects, run `agent-browser open https://example.com`, `agent-browser get title`, and `agent-browser close`.
+
+To refresh instructions and the overlay inside an existing sandbox:
+
+```sh
+git -C ~/.dotfiles pull --ff-only
+bash ~/.dotfiles/sandbox/bootstrap.sh jaiamin/bignums
+```
+
+After merging, a test clone on the setup branch should fetch and switch to main before future updates. Exit and relaunch the agent after refreshing settings. This does not pull the project or upgrade installed guest tools; update those separately. Docker template updates apply to new environments. Keep secret scanning in project CI and use project lockfiles.
+
+On the Mac, inspect or approve a required destination:
+
+```sh
+sbx policy approval ls
+sbx policy allow network --sandbox bignums-claude example.com:443
+```
+
+Routine lifecycle commands on the Mac:
+
 ```sh
 sbx ls
-sbx exec -it jaiamin-bignums-claude bash
+sbx stop bignums-claude
+# Only after preserving code, untracked files, and databases:
+sbx rm bignums-claude
 ```
 
-Inside the sandbox, verify `pwd`, `git status`, `gh api user --jq .login`, and `gitleaks version`. For UI projects, verify `agent-browser open https://example.com`, `agent-browser get title`, then `agent-browser close`. Check Herdr's working/idle state and reopen after a stop.
-
-An unfamiliar destination may need host approval. Inspect `sbx policy approval ls`, then allow the specific destination on the Mac, for example:
-
-```sh
-sbx policy allow network --sandbox jaiamin-bignums-claude example.com:443
-```
-
-Installed guest tools persist; update them explicitly with their package manager/updater when needed. Template updates apply to newly created sandboxes. Use project lockfiles for dependencies. On a new Mac, rerun setup and clone your pushed projects; chezmoi does not back up VM data or running sessions.
-
-```sh
-sbx stop jaiamin-bignums-claude
-# Only after preserving all needed work, databases, and untracked files:
-sbx rm jaiamin-bignums-claude
-```
-
-Removal deletes the sandbox's files and services. Avoid blanket `sbx prune` or `sbx reset` for routine cleanup. Closing a Herdr client leaves its server/panes running; stopping a sandbox or rebooting ends its processes, even though files persist. Reconnect with `dev` and resume the agent session as needed.
-
-Mac native agent permissions stay supervised. Sandbox autonomy does not protect external services from credentials you grant: ask before consequential actions, limit credentials, and enforce appropriate GitHub rules/checks.
+Files persist across stops, but processes end. Removing a sandbox deletes its internal data. A new Mac requires setup and cloning pushed projects; chezmoi does not back up VMs. Avoid blanket prune/reset commands for routine cleanup. Keep Mac directories and host Docker sockets unmounted; add host integrations only when needed.
