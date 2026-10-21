@@ -42,6 +42,7 @@ setup:
 permissions:
   network:
     allow:
+      - claude.ai
       - openrouter.ai
       - context7.com
       - mcp.context7.com
