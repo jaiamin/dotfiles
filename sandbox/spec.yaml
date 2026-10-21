@@ -10,6 +10,9 @@ args:
     enum: ["false", "true"]
   ref:
     default: main
+  agent:
+    required: true
+    enum: [claude, codex, opencode]
 environment:
   variables:
     DOTFILES_REPO: "${{ kit.args.repo }}"
