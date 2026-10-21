@@ -5,4 +5,5 @@
 - Keep project files and services inside the sandbox.
 - Never change host mounts, host policies, credential forwarding, or shared skills.
 - Use task branches and preserve other workers' changes.
-- Ask before production changes, spending, expanding credentials, destructive remote actions, or merging.
+- Ask before introducing paid services, infrastructure outside the isolated workspace, or major architectural changes outside the approved scope.
+- Development databases, containers, and services inside an explicitly isolated workspace are authorized. Preserve valuable data.
