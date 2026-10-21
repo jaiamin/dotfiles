@@ -38,12 +38,13 @@ setup:
         if [ "$DOTFILES_BROWSER" = true ]; then
           bash "$HOME/.dotfiles/sandbox/bootstrap.sh" --browser
         fi
-  permissions:
-    network:
-      allow:
-        - openrouter.ai
-        - context7.com
-        - mcp.context7.com
-        - huggingface.co
-        - "*.huggingface.co"
-        - remotion.media
+        
+permissions:
+  network:
+    allow:
+      - openrouter.ai
+      - context7.com
+      - mcp.context7.com
+      - huggingface.co
+      - "*.huggingface.co"
+      - remotion.media
