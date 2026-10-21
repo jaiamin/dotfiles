@@ -39,7 +39,8 @@ Edit in `chezmoi source-path`, review `chezmoi diff`, then `chezmoi apply`. Comm
 
 - `Brewfile`: Mac apps and tools.
 - `dot_codex/AGENTS.md`: shared agent instructions.
-- `sandbox/`: guest bootstrap, OpenCode overlay, and instructions.
+- `dot_sbxenv.yaml`: shared, mountless Docker environment recipe.
+- `sandbox/`: reusable kit, guest bootstrap, OpenCode overlay, and instructions.
 - `skills.sh`: shared skills.
 
-Mac configuration assumes Apple Silicon. Keep credentials out of Git. Run chezmoi only on the Mac; sandbox setup uses its own small bootstrap.
+Mac configuration assumes Apple Silicon. Keep credentials out of Git. Run chezmoi only on the Mac. Docker runs the guest bootstrap automatically through the shared kit. The environment recipe assumes the default chezmoi source path (`~/.local/share/chezmoi`); adjust its kit source if you customize that path.

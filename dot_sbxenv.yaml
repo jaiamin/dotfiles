@@ -1,0 +1,27 @@
+# Shared recipe. No workspace field means no Mac project directory is mounted.
+# This path matches chezmoi's standard source directory on every Mac.
+schemaVersion: "1"
+agent: "${{ env.args.agent }}"
+args:
+  agent:
+    default: claude
+    enum: [claude, codex, opencode]
+  repo:
+    required: true
+    description: GitHub OWNER/REPO
+  browser:
+    default: "false"
+    enum: ["false", "true"]
+  ref:
+    default: main
+    description: Dotfiles branch or tag used for guest setup
+kits:
+  - source: ./.local/share/chezmoi/sandbox
+    args:
+      repo: "${{ env.args.repo }}"
+      browser: "${{ env.args.browser }}"
+      ref: "${{ env.args.ref }}"
+sandboxOptions:
+  cpus: 4
+  memory: 4g
+  skills: readonly
