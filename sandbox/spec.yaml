@@ -18,6 +18,7 @@ environment:
     DOTFILES_REPO: "${{ kit.args.repo }}"
     DOTFILES_BROWSER: "${{ kit.args.browser }}"
     DOTFILES_REF: "${{ kit.args.ref }}"
+    DOTFILES_AGENT: "${{ kit.args.agent }}"
 agentInstructions:
   content: |
     Read /home/agent/.config/dotfiles/AGENTS.md before working.
