@@ -18,6 +18,9 @@ sbx ports <project>-<agent> --publish <host_port>:<guest_port>
 # Allow website for one sandbox
 sbx policy allow network --sandbox <project>-<agent> <destination>
 
+# Allow al websites for one sandbox
+sbx policy allow network --sandbox <project>-<agent> "**"
+
 # Stop sandbox
 sbx stop <project>-<agent>
 
