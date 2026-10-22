@@ -13,7 +13,7 @@ add mattpocock/skills \
   --skill to-spec --skill to-tickets --skill implement --skill implement-spec \
   --skill tdd --skill code-review --skill diagnosing-bugs \
   --skill codebase-design --skill improve-codebase-architecture \
-  --skill prototype --skill handoff --skill retro --skill teach
+  --skill prototype --skill retro --skill teach
 
 # Frontend: React, components, UI design
 add vercel-labs/agent-skills \
