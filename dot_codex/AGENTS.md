@@ -41,26 +41,25 @@
 - Report what passed and anything you could not verify. Never claim unobserved success.
 
 ## Git and handoff
-- Use one branch per task. Commit coherent checkpoints.
+- Use one branch per task.
 - Push task branches and open PRs when authorized by the task.
 - Never push directly to main, merge, force-push, or rewrite shared history without explicit approval.
 - Never bypass hooks or secret scanning.
 - If Gitleaks reports a finding, stop publication and report the file/rule without printing the secret.
 - Use Conventional Commits unless the repository specifies otherwise.
-- For multi-session work, leave a short durable handoff: completed, remaining, verification, and blockers.
 - On taking over or resuming a task, inspect Git status, fetch origin, and confirm the task branch. Fast-forward only when the checkout is
   clean and the update is unambiguous. Preserve and report conflicts or divergence; never reset or stash work automatically.
 - For multi-session tasks, update tracked `HANDOFF.md` at meaningful milestones and before switching agents. Record the goal, progress,
   decisions, verification, blockers, environment requirements, and exact next action. Reference existing artifacts; exclude secrets.
-- When authorized, commit and push task checkpoints including `HANDOFF.md`. Only one agent owns a task branch at a time. Incoming agents read the
+- When authorized, commit and push task checkpoints including `HANDOFF.md`. Only one agent actively writes to a task branch at a time. Incoming agents read the
   handoff and verify the checkout before continuing.
 
 ## Files and credentials
 - Never print, commit, or copy secrets into prompts, logs, or documentation.
 - Let tools consume assigned development credentials through their normal authentication mechanisms.
-- Use .env.example for configuration structure. Do not inspect secret values or search for unrelated credentials.
+- Use `.env.example` for configuration structure. Do not inspect secret values or search for unrelated credentials.
 - Prefer trash for deleting user-created files when available.
-- Disposable generated build/cache files may be removed within the assigned project.
+- Disposable generated `build/cache` files may be removed within the assigned project.
 - Ask before deleting valuable or uncertain data, dropping persistent databases, or removing remote resources.
 
 ## Tools
@@ -69,9 +68,9 @@
 - Prefer project-local dependencies over global installations.
 - Use existing justfile recipes. Add recipes when repeated commands justify them.
 - Use ast-grep for structural searches and refactors when useful.
-- Fetch current documentation with ctx7 when an API is uncertain or may have changed.
+- Use Context7 when available, otherwise official documentation.
 - Check shell scripts with shellcheck and GitHub Actions workflows with actionlint.
-- Use prek for compatible pre-commit hooks. Do not replace a repository’s established tooling unnecessarily.
+- Use `prek` for compatible pre-commit hooks. Do not replace a repository’s established tooling unnecessarily.
 
 ## New projects
 - Python defaults: `uv`, `ruff`, `pytest`, and `ty`.
