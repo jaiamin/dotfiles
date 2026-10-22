@@ -88,6 +88,15 @@ jobs:
               else:
                   continue
               print(f"Valid syntax: {name}")
+           
+          env = yaml.safe_load(Path("dot_sbxenv.yaml").read_text())
+          kit = yaml.safe_load(Path("sandbox/spec.yaml").read_text())
+          
+          for name in ("repo", "agent", "task", "branch", "browser", "ref"):
+              assert name in env["args"]
+              assert name in kit["args"]
+              expected = "$" + "{{ env.args." + name + " }}"
+              assert env["kits"][0]["args"][name] == expected
           PY
 
       - name: Lint GitHub Actions workflows
