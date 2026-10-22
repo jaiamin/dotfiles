@@ -39,6 +39,9 @@ sbx ls
 # Publish development port
 sbx ports "<sandbox>" --publish <host_port>:<guest_port>
 
+# Show ports published by sandbox
+sbx ports "<sandbox>"
+
 # Allow destination for one sandbox, e.g. example.com:443
 sbx policy allow network --sandbox "<sandbox>" "<destination>"
 
