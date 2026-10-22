@@ -3,3 +3,10 @@ Brewfile
 skills.sh
 sandbox
 sandbox/**
+
+# Private local package lists
+.Brewfile.private
+Brewfile.private
+
+# Repository-only Git exclusions
+.gitignore
