@@ -1,7 +1,28 @@
 % sandbox, herdr
 
-# Create project sandbox
-repo="<repo>"; task="<task>"; agent="<agent>"; hash="$(openssl rand -hex 4)" && task_ref="${task}-${hash}" && HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml --name "${repo##*/}-${task_ref}-${agent}" --env-arg "repo=$repo" --env-arg "task=$task_ref" --env-arg "agent=$agent" --env-arg "browser=<browser>"
+# Create a new task sandbox
+repo="<repo>"; task="<task>"; agent="<agent>"; \
+[[ "$task" =~ ^[a-z][a-z0-9-]{0,31}$ ]] && \
+id="${task}-$(openssl rand -hex 4)" && \
+HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
+  --name "${repo##*/}-${id}-${agent}" \
+  --env-arg "repo=$repo" \
+  --env-arg "agent=$agent" \
+  --env-arg "task=$id" \
+  --env-arg "branch=new" \
+  --env-arg "browser=<browser>"
+
+# Continue an existing task in a new sandbox
+repo="<repo>"; branch="<branch>"; agent="<agent>"; \
+[[ "$branch" =~ ^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$ ]] && \
+id="$(openssl rand -hex 4)" && task_ref="${branch#agent/}" && \
+HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
+  --name "${repo##*/}-${task_ref}-${id}-${agent}" \
+  --env-arg "repo=$repo" \
+  --env-arg "agent=$agent" \
+  --env-arg "task=$task_ref" \
+  --env-arg "branch=$branch" \
+  --env-arg "browser=<browser>"
 
 # Reopen sandbox
 sandbox="<sandbox>"; HERDR_AGENT="${sandbox##*-}" sbx run --name "$sandbox"
@@ -37,3 +58,4 @@ $ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
+$ branch: gh api "repos/<repo>/branches?per_page=100" --paginate --jq '.[].name' | grep -E '^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$'
