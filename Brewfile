@@ -1,7 +1,5 @@
+tap "docker/tap", trusted: true
 tap "jaiamin/aix"
-tap "docker/tap"
-# Isolated environments for autonomous coding agents
-cask "docker/tap/sbx"
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
@@ -36,6 +34,8 @@ brew "just"
 brew "lazygit"
 # Deep clean and optimize your Mac
 brew "mole"
+# Interactive cheatsheet tool for the command-line
+brew "navi"
 # Create, run, and share large language models (LLMs)
 brew "ollama"
 # Search tool like grep and The Silver Searcher
@@ -78,8 +78,12 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
+# CPAP Analysis Reporter
+cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
+# Build, run, and govern agents across the software development lifecycle
+cask "docker/tap/sbx", trusted: true
 # Music streaming service
 cask "spotify"
 # Mesh VPN based on WireGuard
