@@ -66,32 +66,26 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
   touch "$state_dir/tools-v1"
 fi
 
-# Reuse the installed agent. Install only if missing.
+# Install the latest selected agent before continuing.
 agent=${DOTFILES_AGENT:?Missing DOTFILES_AGENT}
 
 case "$agent" in
-  codex|claude|opencode) ;;
+  codex)
+    npm install -g --prefix "$HOME/.local" \
+      --include=optional @openai/codex@latest
+    ;;
+  claude)
+    curl -fsSL https://claude.ai/install.sh | bash -s -- latest
+    ;;
+  opencode)
+    npm install -g --prefix "$HOME/.local" \
+      --include=optional opencode-ai@latest
+    ;;
   *)
     echo "Unsupported agent: $agent" >&2
     exit 1
     ;;
 esac
-
-if ! command -v "$agent" >/dev/null 2>&1; then
-  case "$agent" in
-    codex)
-      npm install -g --prefix "$HOME/.local" \
-        --include=optional @openai/codex@latest
-      ;;
-    claude)
-      curl -fsSL https://claude.ai/install.sh | bash
-      ;;
-    opencode)
-      npm install -g --prefix "$HOME/.local" \
-        --include=optional opencode-ai@latest
-      ;;
-  esac
-fi
 
 hash -r
 command -v "$agent"
