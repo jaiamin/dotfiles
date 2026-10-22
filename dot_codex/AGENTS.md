@@ -52,6 +52,8 @@
   decisions, verification, blockers, environment requirements, and exact next action. Reference existing artifacts; exclude secrets.
 - Include `HANDOFF.md` in task checkpoints. Only one agent actively writes to a task branch at a time. Incoming agents read the handoff
   and verify the checkout before continuing.
+- Before a PR is ready, preserve the final handoff summary in its PR description and remove task-created HANDOFF.md in a normal commit.
+  Do not delete a handoff file that already belongs to the base repository.
 
 ## Files and credentials
 - Never print, commit, or copy secrets into prompts, logs, or documentation.

@@ -202,9 +202,10 @@ if [[ -n $branch ]]; then
 
   git -C "$workspace" config --local sandbox.assignedBranch "$branch"
   git -C "$workspace" config --local pull.ff only
-
-  printf '\n## Assigned task\n- Branch: `%s`\n- Stay on this branch. Read HANDOFF.md before continuing.\n' \
+  
+  printf '\n## Assigned task\n- Branch: %s\n- Stay on this branch. Read HANDOFF.md before continuing.\n' \
     "$branch" >> "$HOME/.config/dotfiles/AGENTS.md"
+
 fi
 
 printf 'Ready: %s. Existing project hooks are preserved; keep secret scanning in CI too.\n' "$workspace"

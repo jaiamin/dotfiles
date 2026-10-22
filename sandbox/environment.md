@@ -16,5 +16,4 @@
 - Check relevant open PRs before modifying interfaces other tasks depend on.
 - Assigned work authorizes checkpoint commits, task-branch pushes, and PR creation.
 - Open or update one draft PR per task. Keep its description and verification results current.
-- Before marking ready, integrate the latest origin/main, resolve conflicts, and rerun relevant checks. Leave blocked work in draft.
-
+- Before marking ready, integrate the latest remote default branch, resolve conflicts, and rerun relevant checks. Leave blocked work in draft.
