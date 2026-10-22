@@ -66,28 +66,36 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
   touch "$state_dir/tools-v1"
 fi
 
-# Install the newest release of the selected coding agent.
-case "${DOTFILES_AGENT:?Missing DOTFILES_AGENT}" in
-  codex)
-    npm install -g --prefix "$HOME/.local" \
-      --include=optional @openai/codex@latest
-    ;;
-  claude)
-    curl -fsSL https://claude.ai/install.sh | bash
-    ;;
-  opencode)
-    npm install -g --prefix "$HOME/.local" \
-      --include=optional opencode-ai@latest
-    ;;
+# Reuse the installed agent. Install only if missing.
+agent=${DOTFILES_AGENT:?Missing DOTFILES_AGENT}
+
+case "$agent" in
+  codex|claude|opencode) ;;
   *)
-    echo "Unsupported agent: $DOTFILES_AGENT" >&2
+    echo "Unsupported agent: $agent" >&2
     exit 1
     ;;
 esac
 
+if ! command -v "$agent" >/dev/null 2>&1; then
+  case "$agent" in
+    codex)
+      npm install -g --prefix "$HOME/.local" \
+        --include=optional @openai/codex@latest
+      ;;
+    claude)
+      curl -fsSL https://claude.ai/install.sh | bash
+      ;;
+    opencode)
+      npm install -g --prefix "$HOME/.local" \
+        --include=optional opencode-ai@latest
+      ;;
+  esac
+fi
+
 hash -r
-command -v "$DOTFILES_AGENT"
-"$DOTFILES_AGENT" --version
+command -v "$agent"
+"$agent" --version
 
 # One generated instruction file, shared by all supported agent locations.
 mkdir -p "$HOME/.config/dotfiles" "$HOME/.claude" "$HOME/.codex" "$HOME/.config/opencode" "$HOME/.config/git"
