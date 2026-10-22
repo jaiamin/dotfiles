@@ -151,7 +151,6 @@ if [[ -n ${DOTFILES_TASK:-} ]]; then
 elif [[ -n $assigned ]]; then
   branch=$assigned
   selection=existing
-fi
 else
   echo 'No task specified and no saved branch assignment.' >&2
   exit 1
