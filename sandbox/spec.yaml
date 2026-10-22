@@ -16,6 +16,9 @@ args:
   task:
     required: true
     pattern: '^[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$'
+  branch:
+    default: new
+    pattern: '^(new|agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8})$'
 environment:
   variables:
     DOTFILES_REPO: "${{ kit.args.repo }}"
@@ -23,6 +26,7 @@ environment:
     DOTFILES_REF: "${{ kit.args.ref }}"
     DOTFILES_AGENT: "${{ kit.args.agent }}"
     DOTFILES_TASK: "${{ kit.args.task }}"
+    DOTFILES_BRANCH: "${{ kit.args.branch }}"
 agentInstructions:
   content: |
     Read /home/agent/.config/dotfiles/AGENTS.md before working.
