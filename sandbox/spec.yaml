@@ -13,12 +13,16 @@ args:
   agent:
     required: true
     enum: [claude, codex, opencode]
+  task:
+    required: true
+    pattern: '^[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$'
 environment:
   variables:
     DOTFILES_REPO: "${{ kit.args.repo }}"
     DOTFILES_BROWSER: "${{ kit.args.browser }}"
     DOTFILES_REF: "${{ kit.args.ref }}"
     DOTFILES_AGENT: "${{ kit.args.agent }}"
+    DOTFILES_TASK: "${{ kit.args.task }}"
 agentInstructions:
   content: |
     Read /home/agent/.config/dotfiles/AGENTS.md before working.

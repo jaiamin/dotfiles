@@ -66,6 +66,42 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
   touch "$state_dir/tools-v1"
 fi
 
+# Assign one immutable task branch per sandbox.
+# Old sandboxes without DOTFILES_TASK remain supported.
+if [[ -n ${DOTFILES_TASK:-} ]]; then
+  branch="agent/$DOTFILES_TASK"
+  git -C "$workspace" check-ref-format --branch "$branch" >/dev/null
+
+  assigned=$(git -C "$workspace" config --local --get sandbox.assignedBranch || true)
+
+  if [[ -n $assigned && $assigned != "$branch" ]]; then
+    echo "Sandbox already assigned to $assigned" >&2
+    exit 1
+  fi
+
+  current=$(git -C "$workspace" branch --show-current)
+
+  if [[ $current != "$branch" ]]; then
+    if [[ $current != main || -n $(git -C "$workspace" status --porcelain) ]]; then
+      echo "Refusing to switch an existing or modified checkout." >&2
+      exit 1
+    fi
+
+    if git -C "$workspace" show-ref --verify --quiet "refs/heads/$branch" ||
+       git -C "$workspace" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+      echo "Task branch already exists; refusing to reuse it." >&2
+      exit 1
+    fi
+
+    git -C "$workspace" switch -c "$branch"
+  fi
+
+  git -C "$workspace" config --local sandbox.assignedBranch "$branch"
+
+  printf '\n## Assigned sandbox task\n- Task ID: `%s`\n- Branch: `%s`\n' \
+    "$DOTFILES_TASK" "$branch" >> "$HOME/.config/dotfiles/AGENTS.md"
+fi
+
 # Install the newest release of the selected coding agent.
 case "${DOTFILES_AGENT:?Missing DOTFILES_AGENT}" in
   codex)
