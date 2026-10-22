@@ -50,6 +50,8 @@ brew "prek"
 brew "starship"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
+# Internet file retriever
+brew "wget"
 # Fish-like fast/unobtrusive autosuggestions for zsh
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
@@ -78,6 +80,8 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
+# CPAP Analysis Reporter
+cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
