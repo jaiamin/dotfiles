@@ -1,12 +1,10 @@
 # Docker Sandboxes
 
-Autonomous projects run in persistent Linux sandboxes without mounting Mac project folders. Herdr stays on the Mac; native agents remain supervised.
+One task per sandbox, one branch per task, one active writer per branch. Project files stay inside Linux; Herdr runs on the Mac.
 
-Use current `sbx`. Kits, environment files, and shared skills are evolving features.
+## New Mac
 
-## Once per Mac
-
-Complete the root README first, then:
+Complete the [Mac setup](../README.md), then:
 
 ```sh
 sbx login
@@ -19,104 +17,41 @@ sbx secret set openai --oauth
 sbx skills import
 ```
 
-On a fresh installation, run `sbx policy init balanced`. Otherwise inspect `sbx policy ls --wide`.
+On a fresh setup, run `sbx policy init balanced`. Otherwise inspect `sbx policy ls --wide`.
 
-Claude subscription users use `/login` inside Claude. OpenCode needs its own supported provider. Keep production credentials out; the GitHub command delegates your existing token’s permissions.
+Claude subscription users sign in with `/login` inside Claude. OpenCode needs a supported provider. Use development credentials only.
 
+## Tasks
 
-## Create and continue tasks
+Run `navi`:
 
-Use Navi's "Create a new task sandbox" command for new work.
+- **Create a new task sandbox:** select a repo, task name, agent, and browser option. The repo must have an initial commit.
+- **Continue a pushed task branch with another agent:** select an existing task branch.
+- **Reopen sandbox:** return to an existing sandbox.
 
-Provide:
-- Repository: `jaiamin/bignums`
-- Task: `auth`
-- Agent: `claude`, `codex`, or `opencode`
-- Browser: `false` or `true`
+New tasks use `agent/<task>-<random-id>`. New sandboxes install the latest selected agent.
 
-Each new task gets an isolated checkout and a unique
-`agent/<task>-<hash>` branch.
+Before switching agents, commit and push work with `HANDOFF.md`, then stop the old sandbox. Git does not transfer ignored files, databases, or installed dependencies.
 
-For a handoff, first have the current agent commit and
-push its work and HANDOFF.md, then stop that agent.
+Agents maintain one draft PR per task. Review before merging.
 
-Use Navi's "Continue an existing task in a new sandbox"
-command. Select the repository and existing remote branch,
-then choose the next agent.
+## Access
 
-The new sandbox checks out the same task branch and
-reuses its existing work and handoff. Do not run two
-writers on that branch simultaneously.
+Navi includes SSH, VS Code, ports, network access, stop, and delete commands. Run `sbx ls` to see sandbox names.
 
-To reopen an existing sandbox without changing its agent,
-use Navi's existing "Reopen sandbox" command.
+Project path: `/home/agent/workspace`. Bind development servers to `0.0.0.0` when publishing ports.
 
-For multi-session work:
-- Keep HANDOFF.md on the task branch while work continues.
-- Maintain one draft PR per task.
-- Transfer the final handoff to the PR description and
-  remove task-created HANDOFF.md before the PR is ready.
-- Do not merge until checks pass and integration is reviewed.
+## Update a sandbox
 
-The task branch must exist on GitHub before another
-sandbox can take over. Local-only changes are not shared.
-
-## Daily use
-
-Reopen an existing sandbox:
+Exit the agent. Inside the sandbox, replace the agent and repo below:
 
 ```sh
-HERDR_AGENT=claude sbx run --name bignums-claude
+git -C ~/.dotfiles pull --ff-only &&
+DOTFILES_AGENT=claude bash ~/.dotfiles/sandbox/bootstrap.sh jaiamin/bignums
 ```
 
-Use one Herdr workspace per project. Local refers to the Mac Herdr server. `HERDR_AGENT` helps status detection; it does not change permissions.
+Restart the agent afterward. This updates the selected agent, instructions, and configuration. Reopening alone does not update them.
 
-Avoid bare `sbx run claude` for creation because it mounts the current Mac directory.
+Update project dependencies separately. After updating Mac skills, run `sbx skills import`.
 
-## Preview and inspect
-
-Ask the agent to bind its server to `0.0.0.0`, then run on the Mac:
-
-```sh
-sbx ports bignums-claude --publish 5173:5173
-open http://localhost:5173
-ssh bignums-claude.sbx
-```
-
-The project lives at `/home/agent/workspace`. Use another host port for another project, such as `5174:5173`.
-
-## Maintain
-
-```sh
-sbx ls
-sbx policy approval ls
-sbx policy log
-sbx diagnose
-sbx stop bignums-claude
-```
-
-Allow a required destination on the Mac:
-
-```sh
-sbx policy allow network --sandbox bignums-claude example.com:443
-```
-
-Existing guests do not automatically update. To refresh instructions and configuration, run inside Linux:
-
-```sh
-git -C ~/.dotfiles pull --ff-only
-bash ~/.dotfiles/sandbox/bootstrap.sh jaiamin/bignums
-```
-
-Restart the agent afterward. Update guest tools and project dependencies separately. After updating Mac skills, rerun `sbx skills import`.
-
-Stopping preserves files but ends processes. Removal deletes internal data:
-
-```sh
-# Preserve code, databases, and untracked files first.
-sbx rm bignums-claude
-```
-
-Push important work regularly. Chezmoi does not back up sandboxes. Avoid blanket prune/reset commands.
-
-Routine coding runs autonomously. Initial login, network approvals, and consequential decisions may still need attention. Agent instructions are not enforced approval gates.
+Stopping preserves files. Deleting removes sandbox data, so push work and preserve local data first.
