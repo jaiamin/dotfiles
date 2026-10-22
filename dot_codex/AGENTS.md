@@ -63,7 +63,7 @@
 - Ask before deleting valuable or uncertain data, dropping persistent databases, or removing remote resources.
 
 ## Tools
-- Python: use `uv` for environments, dependencies, and execution.
+- Python: follow existing project tooling; default to uv for new projects.
 - JS/TS: follow the repository’s lockfile; default to `pnpm` for new projects.
 - Prefer project-local dependencies over global installations.
 - Use existing justfile recipes. Add recipes when repeated commands justify them.
