@@ -12,7 +12,7 @@ HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
   --env-arg "branch=new" \
   --env-arg "browser=<browser>"
 
-# Continue an existing task in a new sandbox
+# Continue a pushed task branch with another agent
 repo="<repo>"; branch="<branch>"; agent="<agent>"; \
 [[ "$branch" =~ ^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$ ]] && \
 id="$(openssl rand -hex 4)" && task_ref="${branch#agent/}" && \
