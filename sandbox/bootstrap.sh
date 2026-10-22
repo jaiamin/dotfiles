@@ -66,42 +66,6 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
   touch "$state_dir/tools-v1"
 fi
 
-# Assign one immutable task branch per sandbox.
-# Old sandboxes without DOTFILES_TASK remain supported.
-if [[ -n ${DOTFILES_TASK:-} ]]; then
-  branch="agent/$DOTFILES_TASK"
-  git -C "$workspace" check-ref-format --branch "$branch" >/dev/null
-
-  assigned=$(git -C "$workspace" config --local --get sandbox.assignedBranch || true)
-
-  if [[ -n $assigned && $assigned != "$branch" ]]; then
-    echo "Sandbox already assigned to $assigned" >&2
-    exit 1
-  fi
-
-  current=$(git -C "$workspace" branch --show-current)
-
-  if [[ $current != "$branch" ]]; then
-    if [[ $current != main || -n $(git -C "$workspace" status --porcelain) ]]; then
-      echo "Refusing to switch an existing or modified checkout." >&2
-      exit 1
-    fi
-
-    if git -C "$workspace" show-ref --verify --quiet "refs/heads/$branch" ||
-       git -C "$workspace" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-      echo "Task branch already exists; refusing to reuse it." >&2
-      exit 1
-    fi
-
-    git -C "$workspace" switch -c "$branch"
-  fi
-
-  git -C "$workspace" config --local sandbox.assignedBranch "$branch"
-
-  printf '\n## Assigned sandbox task\n- Task ID: `%s`\n- Branch: `%s`\n' \
-    "$DOTFILES_TASK" "$branch" >> "$HOME/.config/dotfiles/AGENTS.md"
-fi
-
 # Install the newest release of the selected coding agent.
 case "${DOTFILES_AGENT:?Missing DOTFILES_AGENT}" in
   codex)
@@ -169,4 +133,78 @@ exec gitleaks git --pre-commit --staged --redact --no-banner
 HOOK
   chmod 755 "$hook"
 fi
+
+# Assign the sandbox to one task branch.
+# Reuse the saved assignment when refreshing an older session.
+assigned=$(git -C "$workspace" config --local --get sandbox.assignedBranch || true)
+branch=""
+
+if [[ -n ${DOTFILES_TASK:-} ]]; then
+  selection=${DOTFILES_BRANCH:-new}
+  if [[ $selection == new ]]; then
+    branch="agent/$DOTFILES_TASK"
+  else
+    branch=$selection
+  fi
+elif [[ -n $assigned ]]; then
+  branch=$assigned
+  selection=existing
+fi
+
+if [[ -n $branch ]]; then
+  git -C "$workspace" check-ref-format --branch "$branch" >/dev/null
+
+  if [[ $branch == main || $branch == master ]]; then
+    echo 'Cannot assign the default branch.' >&2
+    exit 1
+  fi
+
+  if [[ -n $assigned && $assigned != "$branch" ]]; then
+    echo "Sandbox already assigned to $assigned" >&2
+    exit 1
+  fi
+
+  current=$(git -C "$workspace" branch --show-current)
+
+  if [[ $current != "$branch" ]]; then
+    if [[ -n $assigned || -n $(git -C "$workspace" status --porcelain) ]]; then
+      echo 'Refusing to switch an assigned or modified checkout.' >&2
+      exit 1
+    fi
+
+    git -C "$workspace" fetch --prune origin
+
+    base=$(git -C "$workspace" symbolic-ref --quiet --short refs/remotes/origin/HEAD)
+    base=${base#origin/}
+
+    if [[ $current != "$base" ]]; then
+      echo "Expected a fresh checkout of $base, got $current" >&2
+      exit 1
+    fi
+
+    if [[ $selection == new ]]; then
+      if git -C "$workspace" show-ref --verify --quiet "refs/remotes/origin/$branch" ||
+         git -C "$workspace" show-ref --verify --quiet "refs/heads/$branch"; then
+        echo "Task branch already exists: $branch" >&2
+        exit 1
+      fi
+
+      git -C "$workspace" switch --no-track -c "$branch" "origin/$base"
+    else
+      if ! git -C "$workspace" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+        echo "Remote branch not found: $branch" >&2
+        exit 1
+      fi
+
+      git -C "$workspace" switch --track -c "$branch" "origin/$branch"
+    fi
+  fi
+
+  git -C "$workspace" config --local sandbox.assignedBranch "$branch"
+  git -C "$workspace" config --local pull.ff only
+
+  printf '\n## Assigned task\n- Branch: `%s`\n- Stay on this branch. Read HANDOFF.md before continuing.\n' \
+    "$branch" >> "$HOME/.config/dotfiles/AGENTS.md"
+fi
+
 printf 'Ready: %s. Existing project hooks are preserved; keep secret scanning in CI too.\n' "$workspace"
