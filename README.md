@@ -9,7 +9,7 @@ Install [Homebrew](https://brew.sh), then:
 
 ```sh
 brew install chezmoi gh
-gh auth login
+env -u GH_TOKEN -u GITHUB_TOKEN gh auth login --hostname github.com --scopes workflow
 chezmoi init --apply jaiamin
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
