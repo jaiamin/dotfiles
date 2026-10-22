@@ -14,7 +14,7 @@ sbx settings set ssh.agentForwardingEnabled false
 sbx settings set skills.defaultMode readonly
 sbx daemon restart
 sbx setup ssh
-sbx secret set github --command 'gh auth token'
+sbx secret set github --command 'env -u GH_TOKEN -u GITHUB_TOKEN gh auth token --hostname github.com'
 sbx secret set openai --oauth
 sbx skills import
 ```
