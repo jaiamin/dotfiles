@@ -1,7 +1,7 @@
 % sandbox, herdr
 
 # Create project sandbox
-HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name <project>-<agent> --env-arg agent=<agent> --env-arg repo=<repo>
+HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name <project>-<agent> --env-arg agent=<agent> --env-arg repo=<repo> --env-arg browser=<browser>
 
 # Reopen sandbox
 HERDR_AGENT=<agent> sbx run --name <project>-<agent>
@@ -18,10 +18,17 @@ sbx ports <project>-<agent> --publish <host_port>:<guest_port>
 # Allow website for one sandbox
 sbx policy allow network --sandbox <project>-<agent> <destination>
 
-# Allow al websites for one sandbox
+# Allow all websites for one sandbox
 sbx policy allow network --sandbox <project>-<agent> "**"
+
+# Restore normal network rules for one sandbox
+sbx policy rm network --sandbox <project>-<agent> --resource "**"
 
 # Stop sandbox
 sbx stop <project>-<agent>
 
+# Show pending sandbox approvals
+sbx policy approval ls
+
 $ agent: printf '%s\n' claude codex opencode
+$ browser: printf '%s\n' false true
