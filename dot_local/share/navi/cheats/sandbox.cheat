@@ -51,6 +51,9 @@ sbx policy rm network --sandbox "<sandbox>" --resource "**"
 # Stop sandbox
 sbx stop "<sandbox>"
 
+# Delete sandbox and its internal data (will delete running sandboxes)
+sbx rm --force "<sandbox>"
+
 # Show pending sandbox approvals
 sbx policy approval ls
 
