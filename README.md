@@ -1,7 +1,6 @@
 # dotfiles
 
-- **Mac:** supervised development, learning, and notebooks.
-- **Docker Sandboxes:** autonomous projects. See [setup](sandbox/README.md).
+Personal setup for an Apple Silicon Mac. Native agents are supervised; [Docker Sandboxes](sandbox/README.md) handle autonomous work.
 
 ## New Mac
 
@@ -18,10 +17,11 @@ Open a new terminal:
 
 ```sh
 agent-browser install
+code --install-extension ms-vscode-remote.remote-ssh
 bash "$(chezmoi source-path)/skills.sh"
 ```
 
-Launch native agents to sign in. Complete the separate [sandbox setup](sandbox/README.md) once per Mac. Credentials and sandbox files are not synced by chezmoi.
+Sign in to your agents, then complete the [sandbox setup](sandbox/README.md). Run `navi` for command shortcuts.
 
 ## Update
 
@@ -31,16 +31,10 @@ brew update
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Rerun `skills.sh` when updating skills, then `sbx skills import`. Update existing sandboxes separately using the sandbox README; reopening does not update their tools, instructions, or projects.
+To update skills, rerun `skills.sh` as above, then `sbx skills import` after sandbox setup.
 
 ## Edit
 
-Edit in `chezmoi source-path`, review `chezmoi diff`, then `chezmoi apply`. Commit and push changes.
+Edit files in `chezmoi source-path`, review `chezmoi diff`, then run `chezmoi apply`. Commit and push source changes.
 
-- `Brewfile`: Mac apps and tools.
-- `dot_codex/AGENTS.md`: shared agent instructions.
-- `dot_sbxenv.yaml`: shared, mountless Docker environment recipe.
-- `sandbox/`: reusable kit, guest bootstrap, OpenCode overlay, and instructions.
-- `skills.sh`: shared skills.
-
-Mac configuration assumes Apple Silicon. Keep credentials out of Git. Run chezmoi only on the Mac. Docker runs the guest bootstrap automatically through the shared kit. The environment recipe assumes the default chezmoi source path (`~/.local/share/chezmoi`); adjust its kit source if you customize that path.
+Run chezmoi only on the Mac. Credentials and sandbox data are not synced. The sandbox recipe assumes the default chezmoi source path.
