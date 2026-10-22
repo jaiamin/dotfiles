@@ -15,6 +15,12 @@ args:
   ref:
     default: main
     description: Dotfiles branch or tag used for guest setup
+  task:
+    required: true
+    pattern: '^[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$'
+  branch:
+    default: new
+    pattern: '^(new|agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8})$'
 kits:
   - source: ./.local/share/chezmoi/sandbox
     args:
@@ -22,6 +28,8 @@ kits:
       repo: "${{ env.args.repo }}"
       browser: "${{ env.args.browser }}"
       ref: "${{ env.args.ref }}"
+      task: "${{ env.args.task }}"
+      branch: "${{ env.args.branch }}"
 sandboxOptions:
   cpus: 4
   memory: 4g
