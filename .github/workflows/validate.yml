@@ -1,0 +1,102 @@
+name: Validate dotfiles
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate dotfiles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install validation tools
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends shellcheck zsh ruby
+          python3 -m venv "$RUNNER_TEMP/validation-venv"
+          "$RUNNER_TEMP/validation-venv/bin/pip" install --disable-pip-version-check PyYAML==6.0.3
+          echo "$RUNNER_TEMP/validation-venv/bin" >> "$GITHUB_PATH"
+
+          tools_dir="$RUNNER_TEMP/actionlint"
+          mkdir -p "$tools_dir"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          curl --fail --silent --show-error --location --retry 3 \
+            "$base/$archive" -o "$tools_dir/$archive"
+          curl --fail --silent --show-error --location --retry 3 \
+            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt" -o "$tools_dir/checksums.txt"
+          (cd "$tools_dir" && sha256sum --check --ignore-missing checksums.txt)
+          tar -xzf "$tools_dir/$archive" -C "$tools_dir" actionlint
+          echo "$tools_dir" >> "$GITHUB_PATH"
+
+      - name: Check shell and Brewfile syntax
+        run: |
+          mapfile -d '' scripts < <(git ls-files -z -- '*.sh')
+          for script in "${scripts[@]}"; do
+            bash -n "$script"
+          done
+          if ((${#scripts[@]})); then
+            shellcheck "${scripts[@]}"
+          fi
+          for config in dot_zshrc dot_zprofile; do
+            zsh -n "$config"
+          done
+          ruby -c Brewfile
+
+      - name: Check configuration syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import tomllib
+
+          import yaml
+
+          paths = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+          for name in filter(None, paths):
+              path = Path(name)
+              if path.suffix == ".json":
+                  json.loads(path.read_text())
+              elif path.suffix == ".toml" or name == ".chezmoi.toml.tmpl":
+                  # The current chezmoi config template contains literal TOML only.
+                  tomllib.loads(path.read_text())
+              elif path.suffix in {".yaml", ".yml"}:
+                  list(yaml.safe_load_all(path.read_text()))
+              else:
+                  continue
+              print(f"Valid syntax: {name}")
+          PY
+
+      - name: Lint GitHub Actions workflows
+        run: actionlint -color
+
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"

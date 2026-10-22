@@ -10,3 +10,7 @@ Brewfile.private
 
 # Repository-only Git exclusions
 .gitignore
+
+# GitHub Actions
+.github
+.github/**
