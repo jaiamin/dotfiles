@@ -1,0 +1,24 @@
+% sandbox, herdr
+
+# Create project sandbox
+HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name <project>-<agent> --env-arg agent=<agent> --env-arg repo=<repo>
+
+# Reopen sandbox
+HERDR_AGENT=<agent> sbx run --name <project>-<agent>
+
+# SSH into sandbox
+ssh <project>-<agent>.sbx
+
+# Open sandbox in VS Code
+code --remote ssh-remote+<project>-<agent>.sbx /home/agent/workspace
+
+# Publish development port
+sbx ports <project>-<agent> --publish <host_port>:<guest_port>
+
+# Allow website for one sandbox
+sbx policy allow network --sandbox <project>-<agent> <destination>
+
+# Stop sandbox
+sbx stop <project>-<agent>
+
+$ agent: printf '%s\n' claude codex opencode
