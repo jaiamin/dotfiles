@@ -23,32 +23,43 @@ On a fresh installation, run `sbx policy init balanced`. Otherwise inspect `sbx 
 
 Claude subscription users use `/login` inside Claude. OpenCode needs its own supported provider. Keep production credentials out; the GitHub command delegates your existing token’s permissions.
 
-## Create a project sandbox
 
-Run one of these in a local Herdr pane:
+## Create and continue tasks
 
-```sh
-HERDR_AGENT=claude sbx env run ~/.sbxenv.yaml \
-  --name bignums-claude --env-arg repo=jaiamin/bignums
+Use Navi's "Create a new task sandbox" command for new work.
 
-HERDR_AGENT=codex sbx env run ~/.sbxenv.yaml \
-  --name bignums-codex --env-arg agent=codex \
-  --env-arg repo=jaiamin/bignums
+Provide:
+- Repository: `jaiamin/bignums`
+- Task: `auth`
+- Agent: `claude`, `codex`, or `opencode`
+- Browser: `false` or `true`
 
-HERDR_AGENT=opencode sbx env run ~/.sbxenv.yaml \
-  --name bignums-opencode --env-arg agent=opencode \
-  --env-arg repo=jaiamin/bignums
-```
+Each new task gets an isolated checkout and a unique
+`agent/<task>-<hash>` branch.
 
-Create only what you need. Replace the name and repository for each project. For a new project, create its GitHub repository first:
+For a handoff, first have the current agent commit and
+push its work and HANDOFF.md, then stop that agent.
 
-```sh
-gh repo create jaiamin/my-app --private
-```
+Use Navi's "Continue an existing task in a new sandbox"
+command. Select the repository and existing remote branch,
+then choose the next agent.
 
-Setup installs tools and instructions, configures Git, and clones the repository automatically. Mac changes must be pushed to GitHub before a new sandbox can see them.
+The new sandbox checks out the same task branch and
+reuses its existing work and handoff. Do not run two
+writers on that branch simultaneously.
 
-Add `--env-arg browser=true` at creation for browser testing. Defaults are 4 CPUs and 4 GiB; adjust the shared recipe before creating demanding environments.
+To reopen an existing sandbox without changing its agent,
+use Navi's existing "Reopen sandbox" command.
+
+For multi-session work:
+- Keep HANDOFF.md on the task branch while work continues.
+- Maintain one draft PR per task.
+- Transfer the final handoff to the PR description and
+  remove task-created HANDOFF.md before the PR is ready.
+- Do not merge until checks pass and integration is reviewed.
+
+The task branch must exist on GitHub before another
+sandbox can take over. Local-only changes are not shared.
 
 ## Daily use
 
