@@ -1,7 +1,7 @@
 % sandbox, herdr
 
 # Create project sandbox
-repo="<repo>"; HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name "${repo##*/}-<agent>" --env-arg agent=<agent> --env-arg repo="$repo" --env-arg browser=<browser>
+repo="<repo>"; task="<task>"; agent="<agent>"; hash="$(openssl rand -hex 4)" && task_ref="${task}-${hash}" && HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml --name "${repo##*/}-${task_ref}-${agent}" --env-arg "repo=$repo" --env-arg "task=$task_ref" --env-arg "agent=$agent" --env-arg "browser=<browser>"
 
 # Reopen sandbox
 sandbox="<sandbox>"; HERDR_AGENT="${sandbox##*-}" sbx run --name "$sandbox"
