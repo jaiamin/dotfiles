@@ -48,6 +48,12 @@
 - If Gitleaks reports a finding, stop publication and report the file/rule without printing the secret.
 - Use Conventional Commits unless the repository specifies otherwise.
 - For multi-session work, leave a short durable handoff: completed, remaining, verification, and blockers.
+- On taking over or resuming a task, inspect Git status, fetch origin, and confirm the task branch. Fast-forward only when the checkout is
+  clean and the update is unambiguous. Preserve and report conflicts or divergence; never reset or stash work automatically.
+- For multi-session tasks, update tracked `HANDOFF.md` at meaningful milestones and before switching agents. Record the goal, progress,
+  decisions, verification, blockers, environment requirements, and exact next action. Reference existing artifacts; exclude secrets.
+- When authorized, commit and push task checkpoints including `HANDOFF.md`. Only one agent owns a task branch at a time. Incoming agents read the
+  handoff and verify the checkout before continuing.
 
 ## Files and credentials
 - Never print, commit, or copy secrets into prompts, logs, or documentation.
@@ -68,7 +74,7 @@
 - Use prek for compatible pre-commit hooks. Do not replace a repository’s established tooling unnecessarily.
 
 ## New projects
-- Python defaults: uv, ruff, pytest, and ty.
+- Python defaults: `uv`, `ruff`, `pytest`, and `ty`.
 - TypeScript defaults: pnpm, strict TypeScript, Vitest, and Biome.
 - Add only the tools the project actually needs.
 - Document setup and verification commands. Add CI appropriate to the project.
