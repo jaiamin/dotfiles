@@ -36,14 +36,13 @@
 - Never weaken checks or delete tests just to make them pass.
 - If an exception is justified, explain the reason and remaining risk.
 - For UI changes, verify the relevant user flow in a browser.
-- Use design and accessibility skills when applicable and available.
 - Investigate CI failures introduced by your changes and fix them.
 - Report what passed and anything you could not verify. Never claim unobserved success.
 
 ## Git and handoff
 - Use one branch per task.
-- Push task branches and open PRs when authorized by the task.
-- Never push directly to main, merge, force-push, or rewrite shared history without explicit approval.
+- Commit coherent checkpoints. Push task branches and create or update PRs when authorized by the task or execution environment.
+- Never merge PRs, enable auto-merge, push directly to main, force-push, or rewrite shared history without explicit approval.
 - Never bypass hooks or secret scanning.
 - If Gitleaks reports a finding, stop publication and report the file/rule without printing the secret.
 - Use Conventional Commits unless the repository specifies otherwise.
@@ -51,8 +50,8 @@
   clean and the update is unambiguous. Preserve and report conflicts or divergence; never reset or stash work automatically.
 - For multi-session tasks, update tracked `HANDOFF.md` at meaningful milestones and before switching agents. Record the goal, progress,
   decisions, verification, blockers, environment requirements, and exact next action. Reference existing artifacts; exclude secrets.
-- When authorized, commit and push task checkpoints including `HANDOFF.md`. Only one agent actively writes to a task branch at a time. Incoming agents read the
-  handoff and verify the checkout before continuing.
+- Include `HANDOFF.md` in task checkpoints. Only one agent actively writes to a task branch at a time. Incoming agents read the handoff
+  and verify the checkout before continuing.
 
 ## Files and credentials
 - Never print, commit, or copy secrets into prompts, logs, or documentation.
@@ -73,8 +72,8 @@
 - Use `prek` for compatible pre-commit hooks. Do not replace a repository’s established tooling unnecessarily.
 
 ## New projects
-- Python defaults: `uv`, `ruff`, `pytest`, and `ty`.
-- TypeScript defaults: `pnpm`, strict TypeScript, Vitest, and Biome.
+- Python defaults: `ruff`, `pytest`, and `ty`.
+- TypeScript defaults: strict TypeScript, Vitest, and Biome.
 - Add only the tools the project actually needs.
 - Document setup and verification commands. Add CI appropriate to the project.
 
