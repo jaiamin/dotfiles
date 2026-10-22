@@ -8,12 +8,12 @@ add() { npx --yes skills@latest add "$@" "${A[@]}"; }
 # Workflow: align, plan, build, review, debug
 add mattpocock/skills \
   --skill setup-matt-pocock-skills \
-  --skill grill-me --skill grill-with-docs --skill grilling \
+  --skill grill-with-docs --skill grilling \
   --skill domain-modeling --skill writing-for-agents \
   --skill to-spec --skill to-tickets --skill implement --skill implement-spec \
   --skill tdd --skill code-review --skill diagnosing-bugs \
   --skill codebase-design --skill improve-codebase-architecture \
-  --skill prototype --skill retro --skill teach
+  --skill prototype --skill retro
 
 # Frontend: React, components, UI design
 add vercel-labs/agent-skills \
