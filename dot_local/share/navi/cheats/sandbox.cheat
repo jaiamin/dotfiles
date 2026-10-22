@@ -1,31 +1,34 @@
 % sandbox, herdr
 
 # Create project sandbox
-HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name <project>-<agent> --env-arg agent=<agent> --env-arg repo=<repo> --env-arg browser=<browser>
+repo="<repo>"; HERDR_AGENT=<agent> sbx env run ~/.sbxenv.yaml --name "${repo##*/}-<agent>" --env-arg agent=<agent> --env-arg repo="$repo" --env-arg browser=<browser>
 
 # Reopen sandbox
-HERDR_AGENT=<agent> sbx run --name <project>-<agent>
+sandbox="<sandbox>"; HERDR_AGENT="${sandbox##*-}" sbx run --name "$sandbox"
 
 # SSH into sandbox
-ssh <project>-<agent>.sbx
+ssh "<sandbox>.sbx"
 
 # Open sandbox in VS Code
-code --remote ssh-remote+<project>-<agent>.sbx /home/agent/workspace
+code --remote "ssh-remote+<sandbox>.sbx" /home/agent/workspace
+
+# List sandboxes, status, and published ports
+sbx ls
 
 # Publish development port
-sbx ports <project>-<agent> --publish <host_port>:<guest_port>
+sbx ports "<sandbox>" --publish <host_port>:<guest_port>
 
-# Allow website for one sandbox
-sbx policy allow network --sandbox <project>-<agent> <destination>
+# Allow destination for one sandbox, e.g. example.com:443
+sbx policy allow network --sandbox "<sandbox>" "<destination>"
 
 # Allow all websites for one sandbox
-sbx policy allow network --sandbox <project>-<agent> "**"
+sbx policy allow network --sandbox "<sandbox>" "**"
 
-# Restore normal network rules for one sandbox
-sbx policy rm network --sandbox <project>-<agent> --resource "**"
+# Remove allow-all override for one sandbox
+sbx policy rm network --sandbox "<sandbox>" --resource "**"
 
 # Stop sandbox
-sbx stop <project>-<agent>
+sbx stop "<sandbox>"
 
 # Show pending sandbox approvals
 sbx policy approval ls
@@ -33,3 +36,4 @@ sbx policy approval ls
 $ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
+$ sandbox: sbx ls -q
