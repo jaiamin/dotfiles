@@ -24,8 +24,8 @@ command -v aix >/dev/null && eval "$(aix init zsh)"
 # navi
 command -v navi >/dev/null && eval "$(navi widget zsh)"
 
-# zoxide
-eval "$(zoxide init zsh)"
+# zoxide (replaces cd)
+command -v zoxide >/dev/null && eval "$(zoxide init zsh --cmd cd)"
 
 # Plugins (syntax highlighting must stay last)
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
