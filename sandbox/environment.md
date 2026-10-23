@@ -7,6 +7,7 @@
 - If network access is blocked, report the hostname, port, command, and purpose. Continue other work without bypassing policy.
 - Bind development servers to `0.0.0.0` so ports can be published.
 - When using `agent-browser`, reuse named sessions and close them when finished. Avoid accumulating open sessions.
+- API keys are proxy-injected placeholders (`sbx-cs-...`). They work as-is. Never ask for real values or write secrets to `.env`.
 
 ## Task workflow
 
