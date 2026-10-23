@@ -52,6 +52,8 @@ brew "starship"
 brew "uv"
 # Internet file retriever
 brew "wget"
+# Shell extension to navigate your filesystem faster
+brew "zoxide"
 # Fish-like fast/unobtrusive autosuggestions for zsh
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
@@ -80,6 +82,8 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
+# CPAP Analysis Reporter
+cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
