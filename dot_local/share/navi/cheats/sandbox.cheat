@@ -2,7 +2,7 @@
 
 # Create a new task sandbox
 repo="<repo>"; task="<task>"; agent="<agent>"; \
-[[ "$task" =~ ^[a-z][a-z0-9-]{0,31}$ ]] && \
+[[ "$task" =~ ^[a-z][a-z0-9-]{0,31}$ ]] || { echo 'Task: lowercase letters, digits, hyphens; max 32.' >&2; false; } && \
 id="${task}-$(openssl rand -hex 4)" && \
 HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
   --name "${repo##*/}-${id}-${agent}" \
@@ -14,7 +14,7 @@ HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
 
 # Continue a pushed task branch with another agent
 repo="<repo>"; branch="<branch>"; agent="<agent>"; \
-[[ "$branch" =~ ^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$ ]] && \
+[[ "$branch" =~ ^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$ ]] || { echo 'Not a task branch.' >&2; false; } && \
 id="$(openssl rand -hex 4)" && task_ref="${branch#agent/}" && \
 HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
   --name "${repo##*/}-${task_ref}-${id}-${agent}" \
@@ -24,7 +24,7 @@ HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
   --env-arg "branch=$branch" \
   --env-arg "browser=<browser>"
 
-# Reopen sandbox
+# Reopen sandbox (also restarts the agent session after key changes)
 sandbox="<sandbox>"; HERDR_AGENT="${sandbox##*-}" sbx run --name "$sandbox"
 
 # SSH into sandbox
@@ -39,6 +39,9 @@ sbx ls
 # Publish development port
 sbx ports "<sandbox>" --publish <host_port>:<guest_port>
 
+# Unpublish development port
+sbx ports "<sandbox>" --unpublish <host_port>:<guest_port>
+
 # Show ports published by sandbox
 sbx ports "<sandbox>"
 
@@ -51,14 +54,11 @@ sbx policy allow network --sandbox "<sandbox>" "**"
 # Remove allow-all override for one sandbox
 sbx policy rm network --sandbox "<sandbox>" --resource "**"
 
-# Stop sandbox
-sbx stop "<sandbox>"
+# List network rules for one sandbox
+sbx policy ls "<sandbox>"
 
-# Delete sandbox and its internal data (will delete running sandboxes)
-sbx rm --force "<sandbox>"
-
-# Show pending sandbox approvals
-sbx policy approval ls
+# Show allowed and blocked hosts for one sandbox
+sbx policy log "<sandbox>"
 
 # Add API key to one sandbox (value hidden; allows HTTPS to its host)
 sandbox="<sandbox>"; key="<key>"; host="<host>"; \
@@ -70,16 +70,19 @@ else printf 'Value for %s: ' "$key"; IFS= read -rs value; echo; \
     sbx policy allow network --sandbox "$sandbox" "$host:443"; fi; fi; \
 unset value
 
-# List API keys (names and scopes only, never values)
-sbx secret ls
+# List API keys for one sandbox (names only, never values)
+sbx secret ls --sandbox "<sandbox>"
 
 # Remove API key from one sandbox (pick it, then remove its host rule)
 sandbox="<sandbox>"; host="<host>"; \
 sbx secret rm --sandbox "$sandbox" && \
 sbx policy rm network --sandbox "$sandbox" --resource "$host:443"
 
-# List network rules
-sbx policy ls --wide
+# Stop sandbox
+sbx stop "<sandbox>"
+
+# Delete sandbox, its data, and its keys (will delete running sandboxes)
+sbx rm --force "<sandbox>"
 
 # Create new private GitHub project
 gh repo create "jaiamin/<project>" --private --add-readme
