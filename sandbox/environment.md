@@ -11,7 +11,7 @@
 
 - Work only on the assigned branch. Never switch to main or another task branch.
 - Task branches may be reused across sandboxes for sequential handoffs, regardless of agent type.
-- Before taking over, read HANDOFF.md, fetch origin, and verify the checkout is current.
+- Before taking over, read `HANDOFF.md`, fetch origin, and verify the checkout is current.
 - One active writer per branch. Concurrent implementers must use separate branches.
 - Use GitHub Issues and PRs to coordinate dependencies and shared interfaces.
 - Check relevant open PRs before modifying interfaces other tasks depend on.
