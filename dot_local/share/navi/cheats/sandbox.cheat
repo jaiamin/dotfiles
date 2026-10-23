@@ -60,6 +60,27 @@ sbx rm --force "<sandbox>"
 # Show pending sandbox approvals
 sbx policy approval ls
 
+# Add API key to one sandbox (value hidden; allows HTTPS to its host)
+sandbox="<sandbox>"; key="<key>"; host="<host>"; \
+if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || -z "$host" || "$host" == *[[:space:]/:]* ]]; then echo 'Invalid key or host.' >&2; \
+else printf 'Value for %s: ' "$key"; IFS= read -rs value; echo; \
+  if [[ -z ${value:-} ]]; then echo 'Empty value. Nothing set.' >&2; \
+  else sbx secret set-custom --sandbox "$sandbox" --name "$sandbox-$key" \
+      --env "$key" --host "$host" --value "$value" && \
+    sbx policy allow network --sandbox "$sandbox" "$host:443"; fi; fi; \
+unset value
+
+# List API keys (names and scopes only, never values)
+sbx secret ls
+
+# Remove API key from one sandbox (pick it, then remove its host rule)
+sandbox="<sandbox>"; host="<host>"; \
+sbx secret rm --sandbox "$sandbox" && \
+sbx policy rm network --sandbox "$sandbox" --resource "$host:443"
+
+# List network rules
+sbx policy ls --wide
+
 # Create new private GitHub project
 gh repo create "jaiamin/<project>" --private --add-readme
 
