@@ -66,18 +66,22 @@ if [[ ! "$env_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then echo 'Variable name mus
 elif [[ -z "$host" || "$host" == *[[:space:]/:]* ]]; then echo 'Host must be bare, like api.anthropic.com.' >&2; \
 else printf 'Value for %s (hidden): ' "$env_name"; IFS= read -rs value; echo; \
   if [[ -z ${value:-} ]]; then echo 'Empty value. Nothing set.' >&2; \
-  else sbx secret set-custom --sandbox "$sandbox" \
-      --env "$env_name" --host "$host" --value "$value" && \
-    sbx policy allow network --sandbox "$sandbox" "$host:443"; fi; fi; \
+  else placeholder="sbx-cs-$(openssl rand -hex 12)"; \
+    sbx secret set-custom --sandbox "$sandbox" --env "$env_name" --host "$host" \
+      --placeholder "$placeholder" --value "$value" && \
+    sbx policy allow network --sandbox "$sandbox" "$host:443" && \
+    sbx exec -u root "$sandbox" sh -c 'f=/etc/sandbox-persistent.sh; sed -i "/^export $1=/d" "$f"; printf "export %s=%s\n" "$1" "$2" >> "$f"' _ "$env_name" "$placeholder" && \
+    echo "Done. Restart the agent: exit it, then Reopen sandbox."; fi; fi; \
 unset value
 
 # List API keys for one sandbox (names only, never values)
 sbx secret ls --sandbox "<sandbox>"
 
-# Remove API key from one sandbox (pick it, then remove its host rule)
-sandbox="<sandbox>"; host="<host>"; \
+# Remove API key from one sandbox (pick it, then remove its host rule and variable)
+sandbox="<sandbox>"; env_name="<env_name>"; host="<host>"; \
 sbx secret rm --sandbox "$sandbox" && \
-sbx policy rm network --sandbox "$sandbox" --resource "$host:443"
+sbx policy rm network --sandbox "$sandbox" --resource "$host:443" && \
+sbx exec -u root "$sandbox" sed -i "/^export $env_name=/d" /etc/sandbox-persistent.sh
 
 # Stop sandbox
 sbx stop "<sandbox>"
