@@ -5,6 +5,7 @@
 - Installing development tools and running project-local services is authorized. Preserve valuable data.
 - Do not change host mounts, credential bindings, shared skills, or sandbox security settings.
 - If network access is blocked, report the hostname, port, command, and purpose. Continue other work without bypassing policy.
+- When using `agent-browser`, reuse named sessions and close them when finished. Avoid accumulating open sessions.
 
 ## Task workflow
 
