@@ -89,6 +89,11 @@ sbx stop "<sandbox>"
 # Delete sandbox, its data, and its keys (will delete running sandboxes)
 sbx rm --force "<sandbox>"
 
+# Update sandbox to latest dotfiles, instructions, and agent
+sandbox="<sandbox>"; \
+sbx exec -u 1000 -e HOME=/home/agent "$sandbox" bash -c 'set -e; repo=$(git -C ~/workspace remote get-url origin); repo=${repo#https://github.com/}; repo=${repo%.git}; git -C ~/.dotfiles pull --ff-only; DOTFILES_AGENT="$1" bash ~/.dotfiles/sandbox/bootstrap.sh "$repo"' _ "${sandbox##*-}" && \
+echo "Updated. Exit the agent if running, then Reopen sandbox."
+
 # Create new private GitHub project
 gh repo create "jaiamin/<project>" --private --add-readme
 
