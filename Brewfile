@@ -82,8 +82,6 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
-# CPAP Analysis Reporter
-cask "oscar"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
