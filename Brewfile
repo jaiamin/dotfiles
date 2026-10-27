@@ -36,6 +36,8 @@ brew "lazygit"
 brew "mole"
 # Interactive cheatsheet tool for the command-line
 brew "navi"
+# Ambitious Vim-fork focused on extensibility and agility
+brew "neovim"
 # Create, run, and share large language models (LLMs)
 brew "ollama"
 # Search tool like grep and The Silver Searcher
