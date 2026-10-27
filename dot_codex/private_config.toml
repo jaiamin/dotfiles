@@ -8,3 +8,6 @@ network_access = true
 
 [desktop]
 followUpQueueMode = "steer"
+
+[features]
+hooks = true
