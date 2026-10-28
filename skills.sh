@@ -1,9 +1,8 @@
 #!/bin/bash
-# Global agent skills.
+# Install directly into Docker's managed shared skill store; no host Node or agent CLI required.
 set -euo pipefail
 
-A=(-g -a claude-code -a codex -a opencode -y)
-add() { npx --yes skills@latest add "$@" "${A[@]}"; }
+add() { sbx skills add "$@"; }
 
 # Workflow: align, plan, build, review, debug
 add mattpocock/skills \

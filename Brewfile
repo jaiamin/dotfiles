@@ -5,16 +5,8 @@ tap "stablyai/orca"
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
 brew "actionlint"
-# Open-source, cross-platform JavaScript runtime environment
-brew "node"
-# Browser automation CLI for AI agents
-brew "agent-browser"
-# Code searching, linting, rewriting
-brew "ast-grep"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
-# Manage AI coding skills and documentation context
-brew "ctx7"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
 # GitHub command-line tool
@@ -41,16 +33,8 @@ brew "neovim"
 brew "ollama"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
-# AI coding agent, built for the terminal
-brew "opencode"
-# Fast, disk space efficient package manager
-brew "pnpm"
-# Fast Git hook manager written in Rust, drop-in alternative to pre-commit
-brew "prek"
 # Cross-shell prompt for astronauts
 brew "starship"
-# Extremely fast Python package installer and resolver, written in Rust
-brew "uv"
 # Internet file retriever
 brew "wget"
 # Shell extension to navigate your filesystem faster
@@ -67,10 +51,6 @@ cask "blender"
 cask "chatgpt"
 # Anthropic's official Claude AI desktop app
 cask "claude"
-# Terminal-based AI coding assistant
-cask "claude-code@latest"
-# OpenAI's coding agent that runs in your terminal
-cask "codex"
 # Menu bar app for tracking agentic coding limits and usage
 cask "codexbar"
 # Tool to run Windows software
