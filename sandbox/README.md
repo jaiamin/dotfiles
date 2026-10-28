@@ -41,6 +41,12 @@ The shared bootstrap requires a Debian/Ubuntu image with Node/npm, as standard a
 It prepares tools and a checkout; Docker owns agent installation, authentication, and managed configuration.
 Refresh preserves branches, dirty files, and project hooks. It does not upgrade agent binaries.
 
+For everyday use, open `navi` and search `sandbox`: create once, start/resume before opening Orca,
+and stop when finished. Start/resume keeps the VM running without launching an agent; it stays up until stopped.
+Use the shared-skills update shortcut for skills, and the selected agent's guest-side updater for agent binaries.
+Orca handles project worktrees, agent sessions, terminals, and Git. Its SSH target needs setting up only once
+per sandbox. Optional full-server shortcuts are labeled separately; ordinary SSH use does not need them.
+
 In Orca: Settings → SSH → Add Target. Host `my-project.sbx`, user `_default_user_`, no identity file.
 Test and save. Add the remote repository `/home/agent/workspace`, then create task worktrees with this host under **Run on**.
 Only agents installed inside that sandbox appear in its picker. Use a compatible agent mixin or another sandbox for a second agent.
