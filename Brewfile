@@ -93,8 +93,6 @@ cask "docker/tap/sbx", trusted: true
 cask "spotify"
 # Mesh VPN based on WireGuard
 cask "tailscale-app"
-# Desktop application for Unsloth Studio
-cask "unsloth"
 # Open-source code editor
 cask "visual-studio-code"
 # Native desktop client for WhatsApp
