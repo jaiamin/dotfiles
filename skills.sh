@@ -1,9 +1,8 @@
 #!/bin/bash
-# Global agent skills.
+# Install the existing skill catalog directly into Docker's read-only shared store.
 set -euo pipefail
 
-A=(-g -a claude-code -a codex -a opencode -y)
-add() { npx --yes skills@latest add "$@" "${A[@]}"; }
+add() { sbx skills add "$@"; }
 
 # Workflow: align, plan, build, review, debug
 add mattpocock/skills \
@@ -24,4 +23,3 @@ add vercel-labs/agent-browser
 
 # Current library docs
 add upstash/context7 --skill find-docs
-

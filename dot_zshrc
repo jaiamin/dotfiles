@@ -1,4 +1,4 @@
-# Available in interactive shells, including new panes of an existing Herdr server.
+# User-managed command-line tools.
 export PATH="$HOME/.local/bin:$PATH"
 
 # Brewfile lives in the chezmoi source

@@ -1,10 +1,12 @@
 # dotfiles
 
-Personal setup for an Apple Silicon Mac. Native agents are supervised; [Docker Sandboxes](sandbox/README.md) handle autonomous work.
+Personal Apple Silicon Mac setup, with Orca and Docker Sandboxes for autonomous project work.
+Your existing apps, Homebrew taps, shell/editor preferences, and skill catalog are preserved.
+Projects, autonomous agents, dependencies, and browser automation run inside mountless Linux sandboxes.
 
-## New Mac
+## Install
 
-Install [Homebrew](https://brew.sh), then:
+Install Homebrew, then:
 
 ```sh
 brew install chezmoi gh
@@ -13,15 +15,8 @@ chezmoi init --apply jaiamin
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Open a new terminal:
-
-```sh
-agent-browser install
-code --install-extension ms-vscode-remote.remote-ssh
-bash "$(chezmoi source-path)/skills.sh"
-```
-
-Sign in to your agents, then complete the [sandbox setup](sandbox/README.md). Run `navi` for command shortcuts.
+Complete [sandbox setup and Orca connection](sandbox/README.md). Run `navi` for shortcuts.
+Native agents remain available for supervised use; select a sandbox execution target for autonomous work.
 
 ## Update
 
@@ -29,12 +24,20 @@ Sign in to your agents, then complete the [sandbox setup](sandbox/README.md). Ru
 chezmoi update
 brew update
 brew bundle --file="$(chezmoi source-path)/Brewfile"
+sbx skills update
 ```
 
-To update skills, rerun `skills.sh` as above, then `sbx skills import` after sandbox setup.
+`git pull` updates source only; `chezmoi apply` deploys it. `chezmoi update` does both.
+Review `chezmoi diff` before applying. Edit source preferences intentionally and preserve your existing Git workflow.
+Portable native agent preferences remain tracked. Generated Orca hook commands, Codex hook approvals,
+credentials, histories, and runtime databases do not belong in source control.
 
-## Edit
+## Migrate an existing Mac
 
-Edit files in `chezmoi source-path`, review `chezmoi diff`, then run `chezmoi apply`. Commit and push source changes.
+Back up local edits to the two retired paths in `.chezmoiremove` before the first apply.
+The apply removes the old sandbox environment and Herdr config file, while preserving your other setup.
+Run the full existing skill catalog into Docker with `bash "$(chezmoi source-path)/skills.sh"`.
+Test a fresh project sandbox in Orca before retiring old task sandboxes or Herdr itself.
 
-Run chezmoi only on the Mac. Credentials and sandbox data are not synced. The sandbox recipe assumes the default chezmoi source path.
+See the [Mac cleanup checklist](sandbox/README.md#mac-cleanup). Do not uninstall packages or remove skills
+based on the earlier draft's broad cleanup suggestions; your used apps, taps, tools, and skills are retained.

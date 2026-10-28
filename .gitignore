@@ -1,2 +1,9 @@
 # Private Brewfiles
 /*Brewfile.private*
+__pycache__/
+
+# Generated hook scripts and ADE runtime state. Portable preferences stay tracked.
+/dot_codex/hooks.json
+/dot_claude/hooks/
+/dot_orca/
+/dot_config/herdr/

@@ -1,106 +1,34 @@
-% sandbox, herdr
+% sandbox, orca
 
-# Create a new task sandbox
-repo="<repo>"; task="<task>"; agent="<agent>"; \
-[[ "$task" =~ ^[a-z][a-z0-9-]{0,31}$ ]] || { echo 'Task: lowercase letters, digits, hyphens; max 32.' >&2; false; } && \
-id="${task}-$(openssl rand -hex 4)" && \
-HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
-  --name "${repo##*/}-${id}-${agent}" \
-  --env-arg "repo=$repo" \
-  --env-arg "agent=$agent" \
-  --env-arg "task=$id" \
-  --env-arg "branch=new" \
-  --env-arg "browser=<browser>"
+# Create project sandbox for Orca
+bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>"
 
-# Continue a pushed task branch with another agent
-repo="<repo>"; branch="<branch>"; agent="<agent>"; \
-[[ "$branch" =~ ^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$ ]] || { echo 'Not a task branch.' >&2; false; } && \
-id="$(openssl rand -hex 4)" && task_ref="${branch#agent/}" && \
-HERDR_AGENT="$agent" sbx env run ~/.sbxenv.yaml \
-  --name "${repo##*/}-${task_ref}-${id}-${agent}" \
-  --env-arg "repo=$repo" \
-  --env-arg "agent=$agent" \
-  --env-arg "task=$task_ref" \
-  --env-arg "branch=$branch" \
-  --env-arg "browser=<browser>"
+# Refresh sandbox tools and instructions
+bash "$(chezmoi source-path)/sandbox/manage.sh" refresh "<sandbox>" "<repo>" "<browser>"
 
-# Reopen sandbox (also restarts the agent session after key changes)
-sandbox="<sandbox>"; HERDR_AGENT="${sandbox##*-}" sbx run --name "$sandbox"
+# Start full Orca server (optional beta; use a unique port per sandbox)
+bash "$(chezmoi source-path)/sandbox/manage.sh" orca "<sandbox>" <port>
 
-# SSH into sandbox
-ssh "<sandbox>.sbx"
+# Show private Orca pairing link or startup errors
+sbx exec "<sandbox>" -- cat /home/agent/.local/state/dotfiles/orca/server.log
 
-# Open sandbox in VS Code
-code --remote "ssh-remote+<sandbox>.sbx" /home/agent/workspace
-
-# List sandboxes, status, and published ports
+# List sandboxes
 sbx ls
 
-# Publish development port
-sbx ports "<sandbox>" --publish <host_port>:<guest_port>
+# Inspect mounts and configuration
+sbx inspect "<sandbox>"
 
-# Unpublish development port
-sbx ports "<sandbox>" --unpublish <host_port>:<guest_port>
+# Open sandbox shell
+ssh "<sandbox>.sbx"
 
-# Show ports published by sandbox
-sbx ports "<sandbox>"
-
-# Allow destination for one sandbox, e.g. example.com:443
-sbx policy allow network --sandbox "<sandbox>" "<destination>"
-
-# Allow all websites for one sandbox
-sbx policy allow network --sandbox "<sandbox>" "**"
-
-# Remove allow-all override for one sandbox
-sbx policy rm network --sandbox "<sandbox>" --resource "**"
-
-# List network rules for one sandbox
-sbx policy ls "<sandbox>"
-
-# Show allowed and blocked hosts for one sandbox
-sbx policy log "<sandbox>"
-
-# Add API key to one sandbox (value hidden; allows HTTPS to its host)
-sandbox="<sandbox>"; env_name="<env_name>"; host="<host>"; \
-if [[ ! "$env_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then echo 'Variable name must be like ANTHROPIC_API_KEY. Enter the value at the next prompt.' >&2; \
-elif [[ -z "$host" || "$host" == *[[:space:]/:]* ]]; then echo 'Host must be bare, like api.anthropic.com.' >&2; \
-else printf 'Value for %s (hidden): ' "$env_name"; IFS= read -rs value; echo; \
-  if [[ -z ${value:-} ]]; then echo 'Empty value. Nothing set.' >&2; \
-  else placeholder="sbx-cs-$(openssl rand -hex 12)"; \
-    sbx secret set-custom --sandbox "$sandbox" --env "$env_name" --host "$host" \
-      --placeholder "$placeholder" --value "$value" && \
-    sbx policy allow network --sandbox "$sandbox" "$host:443" && \
-    sbx exec -u root "$sandbox" sh -c 'f=/etc/sandbox-persistent.sh; sed -i "/^export $1=/d" "$f"; printf "export %s=%s\n" "$1" "$2" >> "$f"' _ "$env_name" "$placeholder" && \
-    echo "Done. Restart the agent: exit it, then Reopen sandbox."; fi; fi; \
-unset value
-
-# List API keys for one sandbox (names only, never values)
-sbx secret ls --sandbox "<sandbox>"
-
-# Remove API key from one sandbox (pick it, then remove its host rule and variable)
-sandbox="<sandbox>"; env_name="<env_name>"; host="<host>"; \
-sbx secret rm --sandbox "$sandbox" && \
-sbx policy rm network --sandbox "$sandbox" --resource "$host:443" && \
-sbx exec -u root "$sandbox" sed -i "/^export $env_name=/d" /etc/sandbox-persistent.sh
-
-# Stop sandbox
+# Stop sandbox, preserving files
 sbx stop "<sandbox>"
 
-# Delete sandbox, its data, and its keys (will delete running sandboxes)
-sbx rm --force "<sandbox>"
+# Delete sandbox after pushing commits and preserving local data (asks for confirmation)
+sbx rm "<sandbox>"
 
-# Update sandbox to latest dotfiles, instructions, and agent
-sandbox="<sandbox>"; \
-sbx exec -u 1000 -e HOME=/home/agent "$sandbox" bash -c 'set -e; repo=$(git -C ~/workspace remote get-url origin); repo=${repo#https://github.com/}; repo=${repo%.git}; git -C ~/.dotfiles pull --ff-only; DOTFILES_AGENT="$1" bash ~/.dotfiles/sandbox/bootstrap.sh "$repo"' _ "${sandbox##*-}" && \
-echo "Updated. Exit the agent if running, then Reopen sandbox."
-
-# Create new private GitHub project
-gh repo create "jaiamin/<project>" --private --add-readme
-
-$ agent: printf '%s\n' claude codex opencode
+$ agent: printf '%s\n' claude codex opencode copilot cursor devin docker-agent droid gemini kiro shell
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
-$ branch: gh api "repos/<repo>/branches?per_page=100" --paginate --jq '.[].name' | grep -E '^agent/[a-z][a-z0-9-]{0,31}-[0-9a-f]{8}$'
-$ env_name: printf '%s\n' ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY GEMINI_API_KEY INWORLD_API_KEY
-$ host: printf '%s\n' api.anthropic.com api.openai.com openrouter.ai generativelanguage.googleapis.com api.inworld.ai
+$ port: printf '%s\n' 6768 6769 6770

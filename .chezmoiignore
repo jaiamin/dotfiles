@@ -3,6 +3,8 @@ Brewfile
 skills.sh
 sandbox
 sandbox/**
+tests
+tests/**
 
 # Private local package lists
 .Brewfile.private

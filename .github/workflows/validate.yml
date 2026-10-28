@@ -32,6 +32,7 @@ jobs:
       - name: Install validation tools
         env:
           ACTIONLINT_VERSION: 1.7.12
+          CHEZMOI_VERSION: 2.73.3
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends shellcheck zsh ruby
@@ -39,16 +40,22 @@ jobs:
           "$RUNNER_TEMP/validation-venv/bin/pip" install --disable-pip-version-check PyYAML==6.0.3
           echo "$RUNNER_TEMP/validation-venv/bin" >> "$GITHUB_PATH"
 
-          tools_dir="$RUNNER_TEMP/actionlint"
+          tools_dir="$RUNNER_TEMP/tools"
           mkdir -p "$tools_dir"
-          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
-          base="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
-          curl --fail --silent --show-error --location --retry 3 \
-            "$base/$archive" -o "$tools_dir/$archive"
-          curl --fail --silent --show-error --location --retry 3 \
-            "$base/actionlint_${ACTIONLINT_VERSION}_checksums.txt" -o "$tools_dir/checksums.txt"
-          (cd "$tools_dir" && sha256sum --check --ignore-missing checksums.txt)
-          tar -xzf "$tools_dir/$archive" -C "$tools_dir" actionlint
+          for tool in actionlint chezmoi; do
+            case "$tool" in
+              actionlint) version="$ACTIONLINT_VERSION"; repo=rhysd/actionlint ;;
+              chezmoi) version="$CHEZMOI_VERSION"; repo=twpayne/chezmoi ;;
+            esac
+            archive="${tool}_${version}_linux_amd64.tar.gz"
+            base="https://github.com/$repo/releases/download/v$version"
+            curl --fail --silent --show-error --location --retry 3 \
+              "$base/$archive" -o "$tools_dir/$archive"
+            curl --fail --silent --show-error --location --retry 3 \
+              "$base/${tool}_${version}_checksums.txt" -o "$tools_dir/$tool-checksums.txt"
+            (cd "$tools_dir" && sha256sum --check --ignore-missing "$tool-checksums.txt")
+            tar -xzf "$tools_dir/$archive" -C "$tools_dir" "$tool"
+          done
           echo "$tools_dir" >> "$GITHUB_PATH"
 
       - name: Check shell and Brewfile syntax
@@ -89,15 +96,10 @@ jobs:
                   continue
               print(f"Valid syntax: {name}")
            
-          env = yaml.safe_load(Path("dot_sbxenv.yaml").read_text())
-          kit = yaml.safe_load(Path("sandbox/spec.yaml").read_text())
-          
-          for name in ("repo", "agent", "task", "branch", "browser", "ref"):
-              assert name in env["args"]
-              assert name in kit["args"]
-              expected = "$" + "{{ env.args." + name + " }}"
-              assert env["kits"][0]["args"][name] == expected
           PY
+
+      - name: Test sandbox provisioning boundaries
+        run: python3 -m unittest discover -s tests -v
 
       - name: Lint GitHub Actions workflows
         run: actionlint -color
@@ -109,3 +111,21 @@ jobs:
           GITLEAKS_VERSION: 8.30.1
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  macos:
+    name: macOS Bash compatibility
+    runs-on: macos-14
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test with the system Bash
+        env:
+          TEST_BASH: /bin/bash
+        run: python3 -m unittest discover -s tests -v
+      - name: Check shell configuration syntax
+        run: |
+          zsh -n dot_zprofile
+          zsh -n dot_zshrc
