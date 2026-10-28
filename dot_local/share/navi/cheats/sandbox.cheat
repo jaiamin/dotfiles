@@ -40,3 +40,8 @@ $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
 $ port: printf '%s\n' 6768 6769 6770
+
+% github, project
+
+# Create private GitHub repo with initial commit (no local checkout)
+gh repo create "<new_repo>" --private --add-readme
