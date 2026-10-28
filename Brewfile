@@ -1,5 +1,6 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
+tap "stablyai/orca"
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
@@ -24,8 +25,6 @@ brew "git"
 brew "git-lfs"
 # Audit git repos for secrets
 brew "gitleaks"
-# Agent multiplexer that lives in your terminal
-brew "herdr"
 # Lightweight and flexible command-line JSON processor
 brew "jq"
 # Handy way to save and run project-specific commands
@@ -84,6 +83,8 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
+# IDE for orchestrating AI coding agents across terminals and worktrees
+cask "stablyai/orca/orca", trusted: true
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
