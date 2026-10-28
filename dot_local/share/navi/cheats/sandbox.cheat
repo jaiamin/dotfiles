@@ -1,74 +1,34 @@
 % sandbox, orca
 
-# Create a mountless project sandbox
+# Create project sandbox for Orca
 bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>"
 
-# Refresh tools and instructions without switching branches or upgrading agents
+# Refresh sandbox tools and instructions
 bash "$(chezmoi source-path)/sandbox/manage.sh" refresh "<sandbox>" "<repo>" "<browser>"
 
-# Start optional full Orca runtime inside a managed sandbox (beta; choose a unique port)
+# Start full Orca server (optional beta; use a unique port per sandbox)
 bash "$(chezmoi source-path)/sandbox/manage.sh" orca "<sandbox>" <port>
 
-# Read private Orca pairing URL and startup errors in your terminal
+# Show private Orca pairing link or startup errors
 sbx exec "<sandbox>" -- cat /home/agent/.local/state/dotfiles/orca/server.log
-
-# SSH shell (create or select a task worktree before editing)
-ssh "<sandbox>.sbx"
-
-# Start the sandbox's configured TUI (create a task worktree before editing)
-sbx run --name "<sandbox>"
-
-# Run an installed agent in an existing task worktree
-sbx exec -it -w "<worktree>" "<sandbox>" "<agent>"
-
-# Open a task worktree in VS Code Remote SSH
-code --remote "ssh-remote+<sandbox>.sbx" "<worktree>"
 
 # List sandboxes
 sbx ls
 
-# Inspect sandbox configuration and mounts
+# Inspect mounts and configuration
 sbx inspect "<sandbox>"
 
-# Publish a development port
-sbx ports "<sandbox>" --publish <host_port>:<guest_port>
+# Open sandbox shell
+ssh "<sandbox>.sbx"
 
-# Unpublish a development port
-sbx ports "<sandbox>" --unpublish <host_port>:<guest_port>
-
-# Show published ports
-sbx ports "<sandbox>"
-
-# Allow a specific destination, e.g. example.com:443
-sbx policy allow network --sandbox "<sandbox>" "<destination>"
-
-# Show network policy
-sbx policy ls "<sandbox>"
-
-# Show network decisions
-sbx policy log "<sandbox>"
-
-# Store a provider API key using Docker's native prompt
-sbx secret set "<service>" --sandbox "<sandbox>"
-
-# List sandbox credentials
-sbx secret ls --sandbox "<sandbox>"
-
-# Remove a named sandbox credential
-sbx secret rm "<service>" --sandbox "<sandbox>"
-
-# Stop sandbox, preserving its filesystem
+# Stop sandbox, preserving files
 sbx stop "<sandbox>"
 
-# Delete sandbox after preserving commits and valuable local data (asks for confirmation)
+# Delete sandbox after pushing commits and preserving local data (asks for confirmation)
 sbx rm "<sandbox>"
 
-# Update Docker-managed shared skills
-sbx skills update
-
-$ agent: printf '%s\n' claude codex copilot cursor devin docker-agent droid gemini kiro opencode shell
+$ agent: printf '%s\n' claude codex opencode copilot cursor devin docker-agent droid gemini kiro shell
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
-$ service: printf '%s\n' anthropic openai openrouter google github cursor droid
 $ port: printf '%s\n' 6768 6769 6770

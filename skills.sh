@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install directly into Docker's managed shared skill store; no host Node or agent CLI required.
+# Install the existing skill catalog directly into Docker's read-only shared store.
 set -euo pipefail
 
 add() { sbx skills add "$@"; }
@@ -23,4 +23,3 @@ add vercel-labs/agent-browser
 
 # Current library docs
 add upstash/context7 --skill find-docs
-

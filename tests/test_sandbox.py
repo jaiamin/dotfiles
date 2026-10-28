@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -9,13 +10,21 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MANAGE = ROOT / 'sandbox/manage.sh'
 BOOTSTRAP = ROOT / 'sandbox/bootstrap.sh'
+HOST_BASH = os.environ.get('TEST_BASH', 'bash')
 
 
 class ManagerTests(unittest.TestCase):
+    def test_native_preferences_exclude_generated_runtime_snapshots(self):
+        config = (ROOT/'dot_codex/private_config.toml').read_text()
+        self.assertNotIn('[hooks.state.', config)
+        claude = (ROOT/'dot_claude/settings.json').read_text()
+        self.assertNotIn('.orca/agent-hooks', claude)
+        self.assertNotIn('herdr-agent-state', claude)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         self.log = self.root / 'calls.jsonl'
@@ -32,7 +41,7 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
         stub.chmod(0o755)
 
     def run_manager(self, *args):
-        return subprocess.run(['bash', str(MANAGE), *args], env=self.env, text=True, capture_output=True)
+        return subprocess.run([HOST_BASH, str(MANAGE), *args], env=self.env, text=True, capture_output=True)
 
     def calls(self):
         return [json.loads(x) for x in self.log.read_text().splitlines()] if self.log.exists() else []
@@ -66,6 +75,7 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
             ('create','my-project','owner/repo','claude','--','--mount','/Users/jai:/work'),
             ('create','my-project','owner/repo','claude','--','.'),
             ('orca','my-project','80'),
+            ('orca','my-project','06768'),
         ]
         for args in cases:
             with self.subTest(args=args):
@@ -103,7 +113,7 @@ class GitTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         home = self.root/'home'
         home.mkdir()
         self.bin = self.root/'bin'
@@ -172,6 +182,42 @@ class GitTests(unittest.TestCase):
         (self.workspace/'important').write_text('keep')
         self.assertNotEqual(self.setup_repo().returncode,0)
         self.assertEqual((self.workspace/'important').read_text(),'keep')
+
+
+@unittest.skipUnless(shutil.which('chezmoi'), 'chezmoi integration needs its CLI')
+class ChezmoiTests(unittest.TestCase):
+    def test_apply_removes_only_retired_files_and_is_repeatable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            home = root/'home'
+            home.mkdir()
+            source = root/'source'
+            shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', '__pycache__'))
+            retired = (ROOT/'.chezmoiremove').read_text().splitlines()
+            keep = ['.codex/auth.json', '.claude/.credentials.json', '.ssh/config', '.config/nvim/local.lua', 'notes.md']
+            for name in retired + keep:
+                path = home/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('preserve' if name in keep else 'retired')
+            retired_link = home/'.sbxenv.yaml'
+            retired_link.unlink()
+            retired_link.symlink_to(home/'notes.md')
+            env = dict(os.environ, HOME=str(home))
+            for key in ('CONFIG', 'DATA', 'CACHE', 'STATE'):
+                env[f'XDG_{key}_HOME'] = str(root/key.lower())
+            command = [shutil.which('chezmoi'), '--source', str(source), '--destination', str(home),
+                       '--config', str(root/'chezmoi.toml'), '--persistent-state', str(root/'state.boltdb'),
+                       '--cache', str(root/'cache'), '--force', '--no-tty', 'apply']
+            for _ in range(2):
+                result = subprocess.run(command, env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(any((home/name).exists() for name in retired))
+            for name in keep:
+                self.assertEqual((home/name).read_text(), 'preserve')
+            self.assertFalse((home/'sandbox').exists())
+            self.assertFalse((home/'tests').exists())
+            self.assertTrue((home/'.local/share/navi/cheats/sandbox.cheat').is_file())
+            self.assertTrue((home/'.gitconfig').is_file())
 
 
 if __name__ == '__main__':

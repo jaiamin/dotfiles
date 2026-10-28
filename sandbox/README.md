@@ -1,137 +1,104 @@
-# Sandboxed development
+# Orca and Docker Sandboxes
 
-One persistent mountless sandbox per project and credential boundary; task worktrees live inside it.
-Use a separate sandbox for risky experiments. Worktrees share the VM's files, processes, services, and credentials.
+Use one mountless sandbox per project and credential boundary, with task worktrees inside it.
+Worktrees share a VM's processes, services, and accessible data; use another sandbox for stronger isolation.
+Docker Sandboxes is standalone. It does not depend on Docker Desktop or host Node.
+Your existing native tools and apps are kept; the sandbox workflow does not require removing them.
 
-## Host setup
+## Setup
 
 ```sh
 sbx login
 sbx settings set ssh.agentForwardingEnabled false
 sbx settings set skills.defaultMode readonly
-# Restart only after pausing existing work; it can interrupt sandbox sessions.
+# Pause existing work before restarting the daemon.
 sbx daemon restart
 sbx setup ssh
+sbx policy ls --wide
 sbx secret set github --command 'env -u GH_TOKEN -u GITHUB_TOKEN gh auth token --hostname github.com'
 sbx secret set openai --oauth
 bash "$(chezmoi source-path)/skills.sh"
 ```
 
-For a fresh setup, initialize `sbx policy init balanced`. Otherwise inspect existing policy.
-Claude subscription users use `/login` inside Claude. Other agents use Docker's documented provider authentication.
-Keep proxy-managed credentials on the host. Do not copy host agent homes or real tokens into the VM.
-Docker Sandboxes is standalone; Docker Desktop is not needed.
+On a fresh installation only, initialize `sbx policy init balanced`.
+Claude subscription users sign in with `/login` inside Claude. Other providers follow their Docker agent guide.
+Credentials stay in Docker's host store; do not copy host agent homes or real tokens into Linux.
 
-## Create and refresh
+## Create and connect
 
-Use Navi or run from the dotfiles source directory:
+Use Navi, or run from the dotfiles source directory:
 
 ```sh
 bash sandbox/manage.sh create my-project owner/repo claude true
-# Any Docker-supported built-in agent or workload kit reference is accepted.
+# Agent and resources can vary:
 bash sandbox/manage.sh create my-codex owner/repo codex false -- --memory 8g
 bash sandbox/manage.sh refresh my-project owner/repo true
 ```
 
-The repository needs an initial commit. Names use lowercase letters, digits, and hyphens, starting with a letter.
-`true` installs browser automation inside Linux. Default resources are 4 CPUs and 4 GiB; tune for actual workloads.
-Creation adds explicit package-download and Context7 domains to that sandbox only; other network policy stays intact.
-Creation refuses existing names. Refresh is limited to manager-created sandboxes and refuses repository mismatches.
-It preserves branches, dirty files, project hooks, and Docker-managed agent settings. It does not upgrade agents.
+The repository needs an initial commit. `true` adds Linux browser automation. Defaults: 4 CPUs, 4 GiB.
+Any Docker-supported built-in agent or workload reference is accepted. Additional kits must match its v2/v3 format.
+The shared bootstrap requires a Debian/Ubuntu image with Node/npm, as standard agent templates provide.
+It prepares tools and a checkout; Docker owns agent installation, authentication, and managed configuration.
+Refresh preserves branches, dirty files, and project hooks. It does not upgrade agent binaries.
 
-The manager calls `sbx create` with no workspace path, copies a small local setup payload with `sbx cp`, then
-runs the guest bootstrap. No dotfiles push, custom kit, registry publication, or host Node runtime is needed.
-Allowed forwarded flags: `--cpus`, `--memory`, `--template`, `--pull`, `--kit`, `--kit-arg`, `--kit-args-file`.
-Do not introduce host mounts through additional kits. Review their declared capabilities first.
-Docker enforces kit compatibility; v2 and v3 cannot be mixed. Bare built-in agent names currently select v2.
+In Orca: Settings → SSH → Add Target. Host `my-project.sbx`, user `_default_user_`, no identity file.
+Test and save. Add the remote repository `/home/agent/workspace`, then create task worktrees with this host under **Run on**.
+Only agents installed inside that sandbox appear in its picker. Use a compatible agent mixin or another sandbox for a second agent.
 
-The common tool bootstrap targets Debian/Ubuntu images with Node/npm, as provided by standard agent templates.
-Other images can be run with native `sbx` commands; adapt their package setup before applying this bootstrap.
-The manager does not implement or replace agent installation, authentication, or permission systems.
+Let Orca own task worktrees. Use one writer per branch/worktree, separate dependencies and service ports, and a draft PR.
+Portable guidance from `dot_codex/AGENTS.md` is combined with `sandbox/AGENTS.md` inside the guest.
+Claude/Codex/OpenCode instruction locations are linked;
+other agents retain their native kit behavior. Update agent binaries with their own guest-side updater between sessions.
+Skills use Docker's managed read-only store. Agents outside that integration need in-sandbox skill setup.
 
-Project path: `/home/agent/workspace`. Setup payload: `/home/agent/.config/dotfiles/source`.
-Shared instructions are `sandbox/AGENTS.md`; common Claude/Codex/OpenCode instruction locations are linked.
-Agents with other instruction conventions keep their native kit behavior; add an instruction adapter only if needed.
-OpenCode has a separate optional settings overlay; its Docker-managed settings/auth files are preserved.
+## Optional full Orca runtime
 
-## Choose a UI or terminal
-
-| Client | Connection | Execution |
-| --- | --- | --- |
-| Orca, documented SSH mode | Settings → SSH; `my-project.sbx`, `_default_user_`, no identity file | Remote worktrees, Git, terminals, and agents |
-| Orca, optional full runtime | Paired Remote Orca Server below | Sandbox owns the Orca runtime and supported structured chats |
-| VS Code / Cursor | Remote SSH to `my-project.sbx` | Remote workspace and development tools |
-| T3 Code | Add SSH environment `my-project.sbx` | T3 server and agents in sandbox |
-| ChatGPT / Claude Desktop | Their documented Docker SSH connection | Supported remote coding backend |
-| Agent TUI | `sbx run --name my-project`, or SSH / `sbx exec -it -w PATH ...` | Agent inside sandbox |
-
-Select the actual task worktree path in each client. One writer per branch/worktree across all clients.
-For TUI-first work, create a task branch/worktree with ordinary Git before editing. Orca can discover external worktrees.
-Orca's agent picker only sees installed agents. Use a compatible agent mixin or another sandbox for a second agent;
-installing an arbitrary binary alone does not configure its credentials, MCP, or UI integration.
-A desktop app without a remote execution backend cannot be made fully sandboxed by dotfiles alone.
-
-## Optional full Orca runtime (beta integration)
-
-The Docker-documented direct SSH route is useful for worktrees, editor/diffs, terminals, and agents.
-It is not feature-equivalent to a paired Orca server: current Orca docs restrict structured-chat availability and
-conversation-continuation actions by execution host. Direct SSH without an Orca runtime lacks those continuation actions.
-
-To try a sandbox-owned runtime:
+Direct SSH supports remote worktrees, editing/diffs, Git, terminals, and agents. Some richer structured-chat
+and conversation-continuation features need a paired Orca runtime rather than a plain SSH workspace.
 
 ```sh
 bash sandbox/manage.sh orca my-project 6768
 sbx exec my-project -- cat /home/agent/.local/state/dotfiles/orca/server.log
 ```
 
-The adapter downloads the official Linux Orca `.deb` for the sandbox architecture if it is not installed,
-starts `orca-ide serve` under a lock, and publishes that port to the Mac's loopback interface.
-Paste the private pairing URL from the log into Orca → Settings → Remote Orca Servers → Add Server.
-The URL uses `127.0.0.1` because both the desktop client and the published port are on this Mac.
-Choose another port for another sandbox. Do not expose it publicly, commit the log, or share its pairing token.
-Keep desktop and server versions compatible. Installed servers are not automatically upgraded by this adapter.
-Select the paired runtime as the default host for its projects; avoid accidentally creating Local workspaces.
+This installs the official Linux Orca package if absent, starts its server, and publishes a localhost port.
+Paste the private pairing URL from the log into Settings → Remote Orca Servers → Add Server.
+Select that runtime for its projects. Use another port for another sandbox; keep the pairing log private.
+Client and server versions must be compatible. The adapter does not upgrade an installed server automatically.
 
-This combines documented Docker port publishing with Orca's beta headless server. It is not Docker's documented
-Orca SSH integration and still requires an Apple Silicon end-to-end test, including provider auth and chat continuation.
-The adapter prints “starting”, not a readiness claim: inspect the log before pairing. Linux package dependencies,
-remote account features, or protocol mismatches can still prevent startup or a particular feature.
-Keep the ordinary SSH/TUI route available if the beta server fails.
+This optional combination is beta and is not Docker's documented Orca SSH integration. Check the log for readiness.
+Apple Silicon startup, provider auth, pairing, and chat continuation remain pre-merge runtime checks.
+Stopping the sandbox stops its server; run the command again to restart it. A local VM pauses with Mac sleep.
 
-The sandbox is put in detached mode to keep the server alive without an attached TUI. Stopping it stops the server.
-After restarting, run the `orca` command above again. Closing the desktop UI can preserve remote sessions;
-a local VM still cannot run while the Mac sleeps. Long unattended sessions require an awake host.
+## Mac cleanup
 
-## Skills and task workflow
+Preserve your existing apps, taps, native tools, editor/shell setup, and skills. This migration changes
+sandbox plumbing and removes generated runtime snapshots; it is not a package or skill purge.
 
-`skills.sh` uses `sbx skills add` directly, with no host agent installation or `npx` step.
-Use `sbx skills update` to refresh. The shared store is Docker-managed and mounted read-only for supported agents.
-Agents outside Docker's shared-skills integration need their own in-sandbox skill setup.
+1. Back up local edits to `~/.sbxenv.yaml` and `~/.config/herdr/config.toml`; `.chezmoiremove` retires those exact files on apply.
+2. Review `chezmoi diff`, then apply. Portable native Claude/Codex/OpenCode preferences remain; generated hook commands and approval hashes are excluded from source.
+3. Run `bash "$(chezmoi source-path)/skills.sh"` to install your entire existing catalog directly into Docker's managed shared store.
+4. Use `sbx skills ls` and `sbx skills update` for that store. Do not prune skills from the catalog.
+5. Keep native `npx` skill directories if you use them with native agents. Docker installation does not delete or update those copies.
+6. After the Orca sandbox works, quit Herdr and uninstall its package only if it is still installed and no longer used.
+7. Retire old task sandboxes individually after pushing commits and preserving ignored files, databases, and other local data.
 
-Keep one task branch/worktree per task and a draft PR. Agents can hand off sequentially within it.
-Use independent dependency installations, build outputs, databases, and service ports per worktree.
-Keep multi-session progress in `HANDOFF.md`. Review before merging.
-Project setup commands belong in that project's tooling; `orca.yaml` is optional and should not be mandatory for other clients.
+Do not delete whole agent homes, credentials, histories, native skill directories, or browser caches as part of this migration.
+Do not use `sbx reset`: it deletes sandbox state and stored credentials. No blanket `brew bundle cleanup` is needed.
+Orca manages its own generated hook scripts, pairing tokens, logs, and runtime databases locally; do not add them to dotfiles.
 
-Use Navi for inspect, ports, scoped network rules, native credential prompts, stop, and confirmed deletion.
-Updates of agent binaries use the agent's own documented updater inside its sandbox, followed by a session restart.
-Refresh changes the shared instruction baseline, so do it between active tasks.
-Stopping preserves files; removing a sandbox deletes its ordinary filesystem. Push commits and preserve ignored data first.
+## Before merging
 
-## Verification before retiring the old setup
+1. Run CI: shell/config checks, real Git regression tests, a temporary-home chezmoi apply, and secret scanning.
+2. On the Mac, create a fresh sandbox and inspect its mounts. Test provider auth, GitHub push, skills, and a project build.
+3. Create two worktrees in Orca, use separate ports, and confirm secret scanning in both.
+4. If using the full runtime, verify server startup, pairing, structured chat, continuation, and reconnect.
+5. Stop/restart the sandbox and verify persisted files before retiring the old setup.
 
-1. Create one fresh sandbox; confirm it has no Mac project workspace mounted using `sbx inspect`.
-2. Test GitHub fetch/push, provider auth, the shared skills, and a relevant project build.
-3. Create two task worktrees, run tests with separate ports, and confirm secret scanning works from both.
-4. Connect Orca and one other client to the same remote task path; use them sequentially.
-5. If using full Orca, verify startup, pairing, structured chat, conversation continuation, and reconnect.
-6. Stop/restart the sandbox and re-launch its optional server. Check persisted files before any deletion.
+CI cannot establish that the Mac/VM/provider checks passed. Keep this PR draft until those are verified.
 
-Shell/unit/CI checks do not establish that these Mac/VM/client integration checks passed.
-
-Sources: [Docker integrations](https://docs.docker.com/ai/sandboxes/integrations/),
-[Orca SSH](https://docs.docker.com/ai/sandboxes/integrations/orca/),
+Sources: [Docker Orca connection](https://docs.docker.com/ai/sandboxes/integrations/orca/),
 [Docker usage](https://docs.docker.com/ai/sandboxes/usage/),
-[shared skills](https://docs.docker.com/ai/sandboxes/workflows/agent-skills/),
+[skills](https://docs.docker.com/ai/sandboxes/workflows/agent-skills/),
 [Orca chat](https://github.com/stablyai/orca/blob/main/docs/site/content/docs/agents/native-chat.mdx),
 [Orca servers](https://github.com/stablyai/orca/blob/main/docs/site/content/docs/remote-servers.mdx).

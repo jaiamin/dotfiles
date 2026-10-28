@@ -1,0 +1,13 @@
+approval_policy = "on-request"
+approvals_reviewer = "user"
+sandbox_mode = "workspace-write"
+web_search = "live"
+
+[sandbox_workspace_write]
+network_access = true
+
+[desktop]
+followUpQueueMode = "steer"
+
+[features]
+hooks = true
