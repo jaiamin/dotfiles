@@ -1,31 +1,39 @@
 % sandbox, orca
 
-# Create project sandbox for Orca
+# Create project sandbox for Orca (once per project)
 bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>"
 
-# Refresh sandbox tools and instructions
-bash "$(chezmoi source-path)/sandbox/manage.sh" refresh "<sandbox>" "<repo>" "<browser>"
-
-# Start full Orca server (optional beta; use a unique port per sandbox)
-bash "$(chezmoi source-path)/sandbox/manage.sh" orca "<sandbox>" <port>
-
-# Show private Orca pairing link or startup errors
-sbx exec "<sandbox>" -- cat /home/agent/.local/state/dotfiles/orca/server.log
-
-# List sandboxes
-sbx ls
-
-# Inspect mounts and configuration
-sbx inspect "<sandbox>"
-
-# Open sandbox shell
-ssh "<sandbox>.sbx"
+# Start or resume sandbox for Orca (keeps running until stopped)
+sbx run --detach --name "<sandbox>"
 
 # Stop sandbox, preserving files
 sbx stop "<sandbox>"
 
-# Delete sandbox after pushing commits and preserving local data (asks for confirmation)
+# List sandboxes and status
+sbx ls
+
+# Inspect sandbox mounts and configuration
+sbx inspect "<sandbox>"
+
+# Test SSH connection or open sandbox shell
+ssh "<sandbox>.sbx"
+
+# Refresh sandbox tools and instructions (does not update agents)
+bash "$(chezmoi source-path)/sandbox/manage.sh" refresh "<sandbox>" "<repo>" "<browser>"
+
+# Update shared sandbox skills
+sbx skills update
+
+# Delete sandbox and its files (push work first; asks for confirmation)
 sbx rm "<sandbox>"
+
+; Optional full Orca runtime
+
+# Start full Orca server (optional beta; unique port per sandbox)
+bash "$(chezmoi source-path)/sandbox/manage.sh" orca "<sandbox>" <port>
+
+# Show private Orca pairing link or startup errors (do not share)
+sbx exec "<sandbox>" -- cat /home/agent/.local/state/dotfiles/orca/server.log
 
 $ agent: printf '%s\n' claude codex opencode copilot cursor devin docker-agent droid gemini kiro shell
 $ browser: printf '%s\n' false true
