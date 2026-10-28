@@ -19,7 +19,7 @@ add shadcn-ui/ui --skill shadcn
 add pbakaus/impeccable --skill impeccable
 
 # Browser testing
-add vercel-labs/agent-browser
+add vercel-labs/agent-browser --skill agent-browser
 
 # Current library docs
 add upstash/context7 --skill find-docs
