@@ -23,3 +23,6 @@ add vercel-labs/agent-browser --skill agent-browser
 
 # Current library docs
 add upstash/context7 --skill find-docs
+
+# Railway
+add railwayapp/railway-skills --skill railway
