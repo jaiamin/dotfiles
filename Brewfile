@@ -47,6 +47,8 @@ brew "opencode"
 brew "pnpm"
 # Fast Git hook manager written in Rust, drop-in alternative to pre-commit
 brew "prek"
+# Extremely fast Python linter, written in Rust
+brew "ruff"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Extremely fast Python package installer and resolver, written in Rust
