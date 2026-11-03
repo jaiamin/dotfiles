@@ -1,4 +1,5 @@
-theme = light:Gruvbox Light Day,dark:Gruvbox Dark
+theme = light:TokyoNight Day,dark:TokyoNight-Black
+background-opacity = 1
 font-feature = -calt
 mouse-hide-while-typing = true
 window-padding-x = 8
