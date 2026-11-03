@@ -1,4 +1,4 @@
-theme = light:TokyoNight Day,dark:TokyoNight-Black
+theme = TokyoNight-Black
 background-opacity = 1
 font-feature = -calt
 mouse-hide-while-typing = true

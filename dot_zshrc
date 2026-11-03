@@ -30,3 +30,6 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh --cmd cd)"
 # Plugins (syntax highlighting must stay last)
 source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
 source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null
+
+# Aliases
+alias vim='nvim'

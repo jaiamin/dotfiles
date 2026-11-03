@@ -3,7 +3,6 @@ return {
     "folke/tokyonight.nvim",
     opts = {
       style = "night",
-      light_style = "day",
       transparent = false,
       on_colors = function(colors)
         if vim.o.background == "dark" then
@@ -18,7 +17,7 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "tokyonight",
+      colorscheme = "tokyonight-night",
     },
   },
 }
