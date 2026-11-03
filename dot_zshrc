@@ -33,3 +33,5 @@ source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2
 
 # Aliases
 alias vim='nvim'
+alias ..='cd ..'
+alias ...='cd ../..'
