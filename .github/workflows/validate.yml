@@ -114,7 +114,7 @@ jobs:
 
   macos:
     name: macOS Bash compatibility
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 5
     steps:
       - name: Check out repository

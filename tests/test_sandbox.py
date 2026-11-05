@@ -15,8 +15,6 @@ HOST_BASH = os.environ.get('TEST_BASH', 'bash')
 
 class ManagerTests(unittest.TestCase):
     def test_native_preferences_exclude_generated_runtime_snapshots(self):
-        config = (ROOT/'dot_codex/private_config.toml').read_text()
-        self.assertNotIn('[hooks.state.', config)
         claude = (ROOT/'dot_claude/settings.json').read_text()
         self.assertNotIn('.orca/agent-hooks', claude)
         self.assertNotIn('herdr-agent-state', claude)
@@ -194,7 +192,7 @@ class ChezmoiTests(unittest.TestCase):
             source = root/'source'
             shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', '__pycache__'))
             retired = (ROOT/'.chezmoiremove').read_text().splitlines()
-            keep = ['.codex/auth.json', '.claude/.credentials.json', '.ssh/config', '.config/nvim/local.lua', 'notes.md']
+            keep = ['.codex/config.toml', '.codex/auth.json', '.claude/.credentials.json', '.ssh/config', '.config/nvim/local.lua', 'notes.md']
             for name in retired + keep:
                 path = home/name
                 path.parent.mkdir(parents=True, exist_ok=True)
