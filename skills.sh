@@ -25,7 +25,9 @@ add vercel-labs/agent-browser --skill agent-browser
 add upstash/context7 --skill find-docs
 
 # Ponytail
-add dietrichgebert/ponytail --skill ponytail
+add dietrichgebert/ponytail \
+  --skill ponytail --skill ponytail-review \
+  --skill ponytail-audit --skill ponytail-gain
 
 # Railway (optional)
 add railwayapp/railway-skills --skill use-railway
