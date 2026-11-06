@@ -1,6 +1,5 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
-tap "stablyai/orca"
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
@@ -85,8 +84,8 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
-# IDE for orchestrating AI coding agents across terminals and worktrees
-cask "stablyai/orca/orca", trusted: true
+# GUI for coding agents running inside Docker Sandboxes over SSH
+cask "t3-code"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
