@@ -28,4 +28,4 @@ add upstash/context7 --skill find-docs
 add dietrichgebert/ponytail --skill ponytail
 
 # Railway (optional)
-add railwayapp/railway-skills --skill railway
+add railwayapp/railway-skills --skill use-railway
