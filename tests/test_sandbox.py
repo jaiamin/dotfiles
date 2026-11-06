@@ -55,10 +55,15 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
                 self.assertEqual(result.returncode,0,result.stderr)
                 calls = self.calls()
                 create = next(x for x in calls if x[0]=='create')
-                self.assertEqual(create,[
-                    'create',agent,'--name','my-project','--cpus','4','--memory','4g',
+                expected = [
+                    'create',str(ROOT/'sandbox/kits/codex-oauth') if agent=='codex' else agent,
+                    '--name','my-project','--cpus','4','--memory','4g',
                     '--skills','readonly','--kit','docker.io/sbx/t3code:latest',
-                ])
+                ]
+                if agent=='codex':
+                    expected.extend(['--kit',str(ROOT/'sandbox/kits/project-openai'),
+                                     '--env','OPENAI_API_KEY=proxy-managed'])
+                self.assertEqual(create,expected)
                 self.assertFalse(any(x[0]=='run' for x in calls))
                 copied = [x[1] for x in calls if x[0]=='cp']
                 self.assertEqual(len(copied),4)

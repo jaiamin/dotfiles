@@ -1,70 +1,243 @@
 # syntax=docker/sandbox-kit:3
-schemaVersion: "3"
+# Skills, sessions, and startup hooks retained from the pinned Docker Codex descriptor.
+schemaVersion: '3'
 kind: workload
-displayName: Codex OAuth routing probe
+displayName: Codex OAuth
 description: Codex with ChatGPT OAuth, leaving the platform API host unclaimed.
 dockerfile: ./Dockerfile
-
 capabilities:
-  - type: com.docker.sandbox/sbx@1
-  - type: com.docker.sandbox/network-policy@1
-    config:
-      runtime:
-        allow:
-          - auth.openai.com:443
-          - chatgpt.com:443
-          - "*.chatgpt.com:443"
-          - "*.oaiusercontent.com:443"
-          - files.openai.com:443
-          - releases.openai.com:443
-          - api.github.com:443
-          - github.com:443
-          - codeload.github.com:443
-          - release-assets.githubusercontent.com:443
-          - registry.npmjs.org:443
-          - deb.debian.org
-          - security.debian.org
-          - archive.ubuntu.com
-          - security.ubuntu.com
-          - ports.ubuntu.com
-          - dhi.io:443
-  - type: com.docker.sandbox/credential@1
-    description: Existing host-managed Codex OAuth; no platform API injection.
-    config:
-      service: openai
-      phase: runtime
-      oauth:
-        tokenEndpoint:
-          host: auth.openai.com
-          path: /oauth/token
-        resourceHosts:
-          - chatgpt.com
-        sentinels:
-          accessToken: oai-oat01-proxy-managed
-          refreshToken: oai-ort01-proxy-managed
-  - type: com.docker.sandbox/lifecycle@1
-    config:
-      install:
-        - user: agent
-          env: [SBX_CRED_OPENAI_MODE]
-          description: Configure the probe's Codex for host-managed OAuth only.
-          command: |
-            set -eu
-            if [ "${SBX_CRED_OPENAI_MODE:-none}" != oauth ]; then
-              echo 'This probe requires an existing host-managed OpenAI OAuth login.' >&2
-              exit 1
-            fi
-            mkdir -p /home/agent/.codex /home/agent/workspace
-            cat > /home/agent/.codex/config.toml <<'EOF'
-            approval_policy = "never"
-            sandbox_mode = "danger-full-access"
-            forced_login_method = "api"
-            model_provider = "sandboxd"
+- type: com.docker.sandbox/sbx@1
+- type: com.docker.sandbox/network-policy@1
+  config:
+    runtime:
+      allow:
+      - auth.openai.com:443
+      - chatgpt.com:443
+      - '*.chatgpt.com:443'
+      - '*.oaiusercontent.com:443'
+      - files.openai.com:443
+      - releases.openai.com:443
+      - api.github.com:443
+      - github.com:443
+      - codeload.github.com:443
+      - release-assets.githubusercontent.com:443
+      - registry.npmjs.org:443
+      - deb.debian.org
+      - security.debian.org
+      - archive.ubuntu.com
+      - security.ubuntu.com
+      - ports.ubuntu.com
+      - dhi.io:443
+- type: com.docker.sandbox/credential@1
+  description: Existing host-managed Codex OAuth; no platform API injection.
+  config:
+    service: openai
+    phase: runtime
+    oauth:
+      tokenEndpoint:
+        host: auth.openai.com
+        path: /oauth/token
+      resourceHosts:
+      - chatgpt.com
+      sentinels:
+        accessToken: oai-oat01-proxy-managed
+        refreshToken: oai-ort01-proxy-managed
+- type: com.docker.sandbox/lifecycle@1
+  config:
+    install:
+    - user: agent
+      env:
+      - SBX_CRED_OPENAI_MODE
+      description: Configure Codex for host-managed OAuth only.
+      command: |
+        set -eu
+        if [ "${SBX_CRED_OPENAI_MODE:-none}" != oauth ]; then
+          echo 'This kit requires an existing host-managed OpenAI OAuth login.' >&2
+          exit 1
+        fi
+        mkdir -p /home/agent/.codex /home/agent/.agents /home/agent/workspace
+        cat > /home/agent/.codex/config.toml <<'EOF'
+        approval_policy = "never"
+        sandbox_mode = "danger-full-access"
+        mcp_oauth_credentials_store = "file"
+        notify = ["/usr/local/bin/sbx-codex-hook", "codex"]
+        forced_login_method = "api"
+        model_provider = "sandboxd"
+        EOF
+        model='${{ kit.args.model }}'
+        effort='${{ kit.args.reasoningEffort }}'
+        [ -z "$model" ] || printf 'model = "%s"\n' "$model" >> /home/agent/.codex/config.toml
+        [ -z "$effort" ] || printf 'model_reasoning_effort = "%s"\n' "$effort" >> /home/agent/.codex/config.toml
+        cat >> /home/agent/.codex/config.toml <<'EOF'
 
-            [model_providers.sandboxd]
-            name = "Sandbox OAuth Proxy"
-            base_url = "https://chatgpt.com/backend-api/codex"
-            experimental_bearer_token = "oai-oat01-proxy-managed"
-            requires_openai_auth = false
-            EOF
-            printf '%s\n' '{"OPENAI_API_KEY":"proxy-managed"}' > /home/agent/.codex/auth.json
+        [model_providers.sandboxd]
+        name = "Sandbox OAuth Proxy"
+        base_url = "https://chatgpt.com/backend-api/codex"
+        experimental_bearer_token = "oai-oat01-proxy-managed"
+        requires_openai_auth = false
+        EOF
+        printf '%s\n' '{"OPENAI_API_KEY":"proxy-managed"}' > /home/agent/.codex/auth.json
+    startup:
+    - command: |
+        set -e
+        [ -n "$MCP_GATEWAY_URL" ] || exit 0
+        cfg="$HOME/.codex/config.toml"
+        touch "$cfg"
+        grep -q "^\[mcp_servers.mcp-gateway\]" "$cfg" && exit 0
+        esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+        url=$(esc "$MCP_GATEWAY_URL")
+        auth=$(esc "$MCP_SENTINEL_TOKEN_NAME")
+        # Codex's grammar for a streamable HTTP server: the transport
+        # is implied by `url` (a `command` would make it stdio; there
+        # is no `type` key), and static headers go in `http_headers`.
+        # A `[...headers]` sub-table is not read, so the gateway
+        # would be reached without its bearer token and codex would
+        # warn about both keys at startup.
+        cat >> "$cfg" <<EOF
+
+        [mcp_servers.mcp-gateway]
+        url = "$url"
+        http_headers = { Authorization = "Bearer $auth" }
+        EOF
+      description: Register the sandbox MCP gateway in ~/.codex/config.toml
+      env:
+      - MCP_GATEWAY_URL
+      - MCP_SENTINEL_TOKEN_NAME
+      user: agent
+    - background: true
+      command: |
+        dir="${XDG_RUNTIME_DIR:-/run/user/1000}"
+        sock="$dir/${WAYLAND_DISPLAY:-wayland-0}"
+        bridge=/usr/local/bin/clipboard-bridge
+        [ -x "$bridge" ] || exit 0
+        for _ in 1 2 3 4 5; do
+          [ -S "$sock" ] && exit 0
+          sleep 1
+        done
+        install -d -o 1000 -g 1000 -m 0700 "$dir"
+        XDG_RUNTIME_DIR="$dir" WAYLAND_DISPLAY="${sock##*/}" \
+          setpriv --reuid=1000 --regid=1000 --init-groups \
+          sh -c 'exec setsid "$0" </dev/null >/tmp/clipboard-bridge.log 2>&1' "$bridge" &
+      description: Relaunch the clipboard bridge codex reads images through
+      env:
+      - XDG_RUNTIME_DIR
+      - WAYLAND_DISPLAY
+      user: '0'
+- type: com.docker.sandbox/agent-sessions@1
+  config:
+    continue:
+    - resume
+    - --last
+    list:
+    - /bin/sh
+    - -c
+    - |
+      set -eu
+      tmp=$(mktemp -d)
+      mkfifo "$tmp/in" "$tmp/out"
+      codex app-server <"$tmp/in" >"$tmp/out" &
+      pid=$!
+      trap 'kill "$pid" 2>/dev/null || :; wait "$pid" 2>/dev/null || :; rm -rf "$tmp"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      exec 3>"$tmp/in" 4<"$tmp/out"
+
+      id=0
+      rpc() {
+        id=$((id + 1))
+        jq -nc --argjson id "$id" --arg method "$1" --argjson params "$2" \
+          '{id: $id, method: $method, params: $params}' >&3
+        while IFS= read -r response <&4; do
+          if printf '%s\n' "$response" |
+            jq -e --argjson id "$id" '.id == $id' >/dev/null; then
+            printf '%s\n' "$response" | jq -e \
+              'if has("error") then error(.error | tostring) else has("result") end' >/dev/null
+            return
+          fi
+        done
+        echo 'Codex exited before responding' >&2
+        exit 1
+      }
+
+      rpc initialize '{"clientInfo":{"name":"session_list","version":"1.0"}}'
+      printf '%s\n' '{"method":"initialized","params":{}}' >&3
+      : >"$tmp/sessions"
+
+      # Match Codex's user-facing resume picker, including exec and
+      # app-server sessions. Sub-agent and unknown threads stay out.
+      for archived in false true; do
+        cursor=null
+        while :; do
+          params=$(jq -nc --argjson cursor "$cursor" --argjson archived "$archived" '
+            {
+              limit: 100, cursor: $cursor, archived: $archived,
+              sourceKinds: ["cli", "vscode", "exec", "appServer"]
+            }')
+          rpc thread/list "$params"
+          printf '%s\n' "$response" | jq -c --argjson archived "$archived" \
+            '.result.data[] + {archived: $archived}' >>"$tmp/sessions"
+          cursor=$(printf '%s\n' "$response" | jq -c '.result.nextCursor')
+          [ "$cursor" != null ] || break
+        done
+      done
+
+      # Each page is ordered, but active and archived pages must be
+      # sorted together before emitting the v1 ID-only result.
+      jq -r -s '
+        unique_by(.id)
+        | sort_by(.updatedAt // 0)
+        | reverse
+        | .[].id' "$tmp/sessions"
+    prompt:
+    - exec
+    - --
+    - '{{.Prompt}}'
+    resume:
+    - resume
+    - '{{.SessionID}}'
+- type: com.docker.sandbox/agent-interactive-sessions@1
+  optional: true
+  config:
+    continue:
+    - resume
+    - --last
+    prompt:
+    - --
+    - '{{.Prompt}}'
+    resume:
+    - resume
+    - '{{.SessionID}}'
+    sessionPicker:
+    - resume
+- type: com.docker.sandbox/agent-skills@1
+  optional: true
+  config:
+    path: /home/agent/.agents/skills
+- type: com.docker.sandbox/agent-context@1
+  optional: true
+  config:
+    content: |
+      Codex uses host-managed ChatGPT OAuth. Project OpenAI API calls use the separate project-openai service at api.openai.com. OPENAI_API_KEY is a public sentinel, never a real key. Shared skills are available in /home/agent/.agents/skills.
+    directory: /home/agent/.codex
+    filename: AGENTS.md
+- type: com.docker.sandbox/agent-context@2
+  optional: true
+  config:
+    content: |
+      Codex uses host-managed ChatGPT OAuth. Project OpenAI API calls use the separate project-openai service at api.openai.com. OPENAI_API_KEY is a public sentinel, never a real key. Shared skills are available in /home/agent/.agents/skills.
+    directory: /home/agent/.codex
+    filename: AGENTS.md
+provides:
+- codex@0.167.0
+args:
+  model:
+    default: ''
+    description: Codex model to use (config.toml `model`); empty keeps the CLI default
+    pattern: ^[A-Za-z0-9._-]*$
+    env: CODEX_MODEL
+  reasoningEffort:
+    default: ''
+    description: Reasoning effort (config.toml `model_reasoning_effort`); empty keeps
+      the CLI default
+    pattern: ^(none|minimal|low|medium|high|xhigh|max|ultra|persistent)?$
+    env: CODEX_REASONING_EFFORT

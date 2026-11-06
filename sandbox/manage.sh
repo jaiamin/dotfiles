@@ -98,6 +98,12 @@ if [[ $action == create ]]; then
   while IFS= read -r item; do
     [[ $item != "$name" ]] || die "Sandbox already exists: $name. Use refresh or connect to it."
   done <<<"$existing"
+  if [[ $agent == codex ]]; then
+    # Keep Codex OAuth on ChatGPT and project API keys on a different service.
+    # Both declarations must be present at creation; kit add cannot wire them.
+    agent="$here/kits/codex-oauth"
+    options+=(--kit "$here/kits/project-openai" --env OPENAI_API_KEY=proxy-managed)
+  fi
   # Omitting the workspace path is deliberate. Docker owns agent/auth configuration.
   sbx create "$agent" --name "$name" "${options[@]}"
   # Explicit setup/service domains; keep the rest of the sandbox policy intact.

@@ -1,8 +1,11 @@
-# OpenAI OAuth and project API routing probe
+# Codex OAuth and project API routing
 
-This is an opt-in experiment for sbx 0.51.0+. It does not replace the default
-T3 setup or modify existing project sandboxes. It must pass live on the Mac
-before its credential declarations are adopted for normal project creation.
+For sbx 0.51.0+, `manage.sh create ... codex` uses this OAuth-only workload and
+the project API mixin alongside T3. Their separated authentication paths passed
+live in the same Mac sandbox: the project API returned `API_OK`, and Codex returned
+`OAUTH_OK` through `sandboxd`. The workload also retains Docker's shared-skills,
+session, and MCP startup declarations from the pinned image. Existing sandboxes
+are not modified. Claude/OpenCode provisioning is unchanged.
 
 The `codex-oauth` v3 workload reuses a pinned, multi-platform Docker Codex image.
 Its `openai` service declares OAuth only, with `chatgpt.com` as its resource host.
@@ -11,12 +14,17 @@ injecting its API key through the standard `OPENAI_API_KEY` variable. It has no
 OAuth declaration. The two services never claim the same resource host.
 
 The existing global `openai` OAuth login remains the source of Codex authentication.
-The helper stores the API key as `project-openai` scoped to the dedicated probe.
+Navi's key helper stores the API key as `project-openai` scoped to the selected
+sandbox when this routing kit is present. SDKs still use `OPENAI_API_KEY`, and
+custom SDK variable names can carry the same public sentinel. Other API hosts
+use the custom-secret flow. There is one native project OpenAI key per sandbox.
 It never stores an API key as `openai`, changes global secrets, edits bindings
 files directly, or puts a real key in a command argument, environment file, or
 sandbox file. Docker records approved kit bindings in its normal host store.
 Docker can request approval for these kit credentials; approve OpenAI OAuth only
 for `auth.openai.com`/`chatgpt.com`, and `project-openai` only for `api.openai.com`.
+
+## Optional isolated diagnostic
 
 From the repository checkout on the Mac:
 
@@ -71,10 +79,11 @@ touches another sandbox. Capture the helper's PASS/FAIL output. Codex failures
 also show a bounded, redacted stderr tail. Do not share keys, auth files,
 full process environments, or unredacted provider logs.
 
-This removes a documented routing ambiguity, but schema checks and mocked tests
-cannot establish whether the current closed-source sbx proxy honors it. Both
-real checks are required. No change to `manage.sh`, Navi, or the default kit list
-should be made until that result is observed.
+The Mac test verified authentication. Repository tests additionally cover creation
+arguments, native/custom Navi routing, rotation, removal, failure handling, and
+the inherited-stdin hang. The complete T3 SSH workflow still uses the normal
+`manage.sh check` and provider checks. Claude OAuth plus an Anthropic project API
+key is a separate same-host case; these results do not verify that combination.
 
 Sources: [Docker credential declarations](https://docs.docker.com/ai/sandboxes/configuration/credentials/),
 [host routing limitation](https://github.com/docker/sbx-releases/issues/615#issuecomment-5928643434),

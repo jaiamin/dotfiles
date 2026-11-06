@@ -53,6 +53,7 @@ class KitRoutingTests(unittest.TestCase):
         lifecycle = next(c['config'] for c in descriptor['capabilities']
                          if c['type'] == 'com.docker.sandbox/lifecycle@1')
         source = lifecycle['install'][0]['command']
+        source = source.replace('${{ kit.args.model }}', '').replace('${{ kit.args.reasoningEffort }}', '')
         for mode in ('oauth', 'apikey', 'none'):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 home = Path(directory)
@@ -67,6 +68,15 @@ class KitRoutingTests(unittest.TestCase):
                 else:
                     self.assertNotEqual(result.returncode, 0)
                     self.assertFalse((home / '.codex/config.toml').exists())
+
+    def test_production_kit_retains_shared_skills_and_mcp_startup(self):
+        descriptor = self.load('codex-oauth')
+        by_type = {c['type']: c['config'] for c in descriptor['capabilities'] if 'config' in c}
+        self.assertEqual(by_type['com.docker.sandbox/agent-skills@1']['path'], '/home/agent/.agents/skills')
+        self.assertIn('com.docker.sandbox/agent-sessions@1', by_type)
+        self.assertIn('com.docker.sandbox/agent-interactive-sessions@1', by_type)
+        startup = by_type['com.docker.sandbox/lifecycle@1']['startup']
+        self.assertTrue(any('mcp_servers.mcp-gateway' in s['command'] and 'http_headers' in s['command'] for s in startup))
 
 
 class HostProbeTests(unittest.TestCase):
