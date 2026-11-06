@@ -34,7 +34,7 @@ sbx secret rm --sandbox "<sandbox>" --env-name "<key_name>"
 gh repo create "<new_repo>" --private --add-readme
 
 $ api_host: printf '%s\n' api.openai.com api.anthropic.com
-$ key_name: printf '%s\n' PROJECT_OPENAI_API_KEY PROJECT_ANTHROPIC_API_KEY
+$ key_name: printf '%s\n' OPENAI_API_KEY ANTHROPIC_API_KEY
 $ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
