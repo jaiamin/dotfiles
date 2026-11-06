@@ -1,6 +1,5 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
-tap "stablyai/orca", trusted: { casks: ["orca"] }
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
