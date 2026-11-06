@@ -63,6 +63,8 @@ brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
 # Turn plain English into shell commands with Apple Intelligence
 brew "jaiamin/aix/aix", trusted: true
+# Agent orchestration platform
+cask "antigravity"
 # 3D creation suite
 cask "blender"
 # OpenAI's official ChatGPT desktop app
