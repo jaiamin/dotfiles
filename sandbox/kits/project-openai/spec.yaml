@@ -1,0 +1,23 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: mixin
+displayName: Project OpenAI API
+description: Platform API authentication separate from the Codex OAuth service.
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - api.openai.com:443
+  - type: com.docker.sandbox/credential@1
+    description: Sandbox-scoped project API key; never replaces the openai OAuth secret.
+    config:
+      service: project-openai
+      phase: runtime
+      apiKey:
+        name: OPENAI_API_KEY
+        proxyManaged: true
+        inject:
+          - domain: api.openai.com
+            header: Authorization
+            format: "Bearer %s"

@@ -22,6 +22,9 @@ For Codex: `sbx secret set openai --oauth`. For Claude: sign in inside the sandb
 [Docker's provider guide](https://docs.docker.com/ai/sandboxes/agents/claude-code/).
 Keep authentication Docker-managed; never copy host agent homes or real tokens.
 
+For the opt-in Codex OAuth/project API routing experiment, see
+[the isolated auth probe](kits/README.md). It leaves this default setup unchanged.
+
 ## Create and connect
 
 From the dotfiles source directory, or use Navi:
