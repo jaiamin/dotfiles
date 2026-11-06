@@ -27,11 +27,17 @@ sbx rm "<sandbox>"
 # Set project API key
 sbx secret set-custom --sandbox "<sandbox>" --host "<api_host>" --env "<key_name>"
 
-# Remove project API key
-sbx secret rm --sandbox "<sandbox>" --host "<api_host>" --env-name "<key_name>"
+# Set project API key
+sandbox="<sandbox>"; key_name="<key_name>"; api_host="<api_host>"; \
+placeholder="sbx-cs-$(openssl rand -hex 12)"; \
+sbx secret set-custom --sandbox "$sandbox" --host "$api_host" --env "$key_name" --placeholder "$placeholder" && \
+sbx policy allow network --sandbox "$sandbox" "$api_host:443" && \
+sbx exec -u root "$sandbox" -- sh -c 'set -eu; f=/etc/sandbox-persistent.sh; touch "$f"; sed -i "/^export $1=/d" "$f"; printf "\nexport %s=%s\n" "$1" "$2" >> "$f"' _ "$key_name" "$placeholder"
 
-# Create private GitHub repo with initial commit (no local checkout)
-gh repo create "<new_repo>" --private --add-readme
+# Remove project API key
+sandbox="<sandbox>"; key_name="<key_name>"; \
+sbx secret rm --sandbox "$sandbox" --host "<api_host>" --env-name "$key_name" && \
+sbx exec -u root "$sandbox" -- sh -c 'sed -i "/^export $1=/d" /etc/sandbox-persistent.sh' _ "$key_name"
 
 $ api_host: printf '%s\n' api.openai.com api.anthropic.com
 $ key_name: printf '%s\n' OPENAI_API_KEY ANTHROPIC_API_KEY
