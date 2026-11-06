@@ -2,14 +2,7 @@
   "env": {
     "CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE": "1"
   },
-  "model": "sonnet",
-  "theme": "auto",
-  "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true,
-    "ralph-loop@anthropic-plugin-directory": true
-  },
   "permissions": {
-    "defaultMode": "default",
     "allow": [
       "WebFetch",
       "WebSearch"
@@ -31,7 +24,13 @@
       "Bash(git reset --hard*)",
       "Bash(git clean *)",
       "Bash(git rebase *)"
-    ]
+    ],
+    "defaultMode": "default"
+  },
+  "model": "sonnet",
+  "enabledPlugins": {
+    "swift-lsp@claude-plugins-official": true,
+    "ralph-loop@anthropic-plugin-directory": true
   },
   "sandbox": {
     "enabled": true,
@@ -42,5 +41,7 @@
       "allowLocalBinding": true
     },
     "excludedCommands": []
-  }
+  },
+  "theme": "auto",
+  "tui": "fullscreen"
 }

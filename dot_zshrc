@@ -36,3 +36,6 @@ alias vim='nvim'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias cm='chezmoi'
+
+# Removes duplicate PATH entries
+typeset -U path
