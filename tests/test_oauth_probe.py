@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -256,6 +257,9 @@ class GuestProbeTests(unittest.TestCase):
         def fake_codex(args, **kwargs):
             self.assertIn('--ephemeral', args)
             self.assertIn('--skip-git-repo-check', args)
+            self.assertEqual(kwargs['stdin'], subprocess.DEVNULL)
+            self.assertIn('model_providers.sandboxd.request_max_retries=0', args)
+            self.assertIn('model_providers.sandboxd.stream_max_retries=0', args)
             output = Path(args[args.index('--output-last-message') + 1])
             output.write_text('OAUTH_OK\n')
             return subprocess.CompletedProcess(args, 0, b'', b'')
@@ -268,6 +272,50 @@ class GuestProbeTests(unittest.TestCase):
              patch.object(verify, 'verify_codex', side_effect=RuntimeError('OAuth failed')), \
              contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(verify.main(), 1)
+
+    def test_codex_gets_eof_even_when_the_verifier_input_pipe_is_held_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / 'codex'
+            binary.write_text(f'#!{sys.executable}\n' + '''import sys
+from pathlib import Path
+assert sys.stdin.read() == ''
+Path(sys.argv[sys.argv.index('--output-last-message') + 1]).write_text('OAUTH_OK')
+''')
+            binary.chmod(0o755)
+            code = ('import sys; sys.path.insert(0, sys.argv[1]); '
+                    'from oauth_api_verify import verify_codex; verify_codex()')
+            process = subprocess.Popen(
+                [sys.executable, '-c', code, str(ROOT / 'sandbox')],
+                env=dict(os.environ, PATH=f'{root}:{os.environ["PATH"]}'),
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            try:
+                # wait(), unlike communicate(), leaves the input pipe open.
+                self.assertEqual(process.wait(timeout=10), 0)
+                self.assertIn(b'PASS Codex OAuth', process.stdout.read())
+            finally:
+                process.stdin.close()
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+                process.stdout.close()
+                process.stderr.close()
+
+    def test_timeout_reports_stdin_hint_but_redacts_credentials(self):
+        error = subprocess.TimeoutExpired('codex', 120, stderr=(
+            b'Reading additional input from stdin...\n'
+            b'Authorization: Bearer private-value\n'
+            b'api_key="private-assignment"\n'
+            b'sk-proj-private-key-value'))
+        with patch.object(verify.subprocess, 'run', side_effect=error), \
+             contextlib.redirect_stderr(io.StringIO()) as stderr:
+            with self.assertRaisesRegex(RuntimeError, 'timed out'):
+                verify.verify_codex()
+        output = stderr.getvalue()
+        self.assertIn('Reading additional input from stdin', output)
+        for secret in ('private-value', 'private-assignment', 'sk-proj-private-key-value'):
+            self.assertNotIn(secret, output)
 
 
 if __name__ == '__main__':

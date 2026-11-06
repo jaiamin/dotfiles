@@ -67,8 +67,9 @@ bash sandbox/oauth-api-probe.sh verify
 ```
 
 Failures preserve the probe for inspection; no automatic deletion or rollback
-touches another sandbox. Capture the helper's PASS/FAIL output. Do not share keys,
-auth files, full process environments, or raw provider logs.
+touches another sandbox. Capture the helper's PASS/FAIL output. Codex failures
+also show a bounded, redacted stderr tail. Do not share keys, auth files,
+full process environments, or unredacted provider logs.
 
 This removes a documented routing ambiguity, but schema checks and mocked tests
 cannot establish whether the current closed-source sbx proxy honors it. Both
