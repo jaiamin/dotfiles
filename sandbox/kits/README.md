@@ -24,8 +24,14 @@ From the repository checkout on the Mac:
 bash sandbox/oauth-api-probe.sh create
 ```
 
-The helper creates `codex-api-probe` without a host workspace mount, prompts for
-the API key through `sbx`, adds the project mixin, and runs both live checks.
+The helper creates `codex-api-probe-r2` without a host workspace mount and includes
+both kits in the initial `sbx create` command. Approve both credential bindings
+even if `project-openai` is not set yet. Docker may warn that no API key is stored;
+that is expected at this stage. The helper then prompts for the sandbox-scoped
+API key through `sbx secret set`, and runs both live checks. It never uses
+`sbx kit add`: sbx 0.51 cannot wire new credentials through that recreate flow.
+An explicit creation-time environment value supplies only the public
+`proxy-managed` sentinel, so standard SDK environment lookup works immediately.
 Source builds use Docker's builder sandbox when host Docker is unavailable.
 Building the kit can take several minutes on the first run. The probe has no
 T3 kit or project checkout; this first experiment isolates authentication.
@@ -45,7 +51,10 @@ match the expected output; a bare HTTP 200 is insufficient. Codex configuration
 is checked before either call to reject an accidental platform-API route.
 
 The helper refuses occupied names and names outside `codex-api-probe[-SUFFIX]`.
-To retry a partially completed setup, or rotate only this probe's API key:
+The original `codex-api-probe` created by the kit-add experiment is left untouched.
+It cannot be repaired by `configure`; create a new probe using the updated helper.
+To retry key configuration after a successful creation, or rotate only this
+probe's API key:
 
 ```sh
 bash sandbox/oauth-api-probe.sh configure
@@ -70,3 +79,6 @@ Sources: [Docker credential declarations](https://docs.docker.com/ai/sandboxes/c
 [host routing limitation](https://github.com/docker/sbx-releases/issues/615#issuecomment-5928643434),
 [custom-secret regression](https://github.com/docker/sbx-releases/issues/601),
 [OAuth override report](https://github.com/docker/sbx-releases/issues/793).
+Docker's [custom-service walkthrough](https://docs.docker.com/learn/content/working-with-sandbox-secrets/)
+documents declaring a credential at creation, approving its binding while unset,
+and then supplying its value to the existing sandbox.

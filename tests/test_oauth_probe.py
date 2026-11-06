@@ -95,7 +95,7 @@ if a[0] == 'create':
 if a[:2] == ['secret', 'set']:
     sys.exit(17 if os.environ.get('FAIL_SECRET') else 0)
 if a[:2] == ['kit', 'add']:
-    sys.exit(19 if os.environ.get('FAIL_KIT') else 0)
+    raise SystemExit('credential-bearing kit add is unsupported')
 if a[0] == 'cp': sys.exit(0)
 if a[0] == 'exec':
     c = a[a.index('--') + 1:]
@@ -121,12 +121,17 @@ raise SystemExit('Unexpected probe command')
         result = self.run_probe("create")
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.calls()
-        self.assertIn(['secret', 'set', 'project-openai', '--sandbox', 'codex-api-probe'], calls)
+        self.assertIn(['secret', 'set', 'project-openai', '--sandbox', 'codex-api-probe-r2'], calls)
         create = next(c for c in calls if c[0] == 'create')
-        self.assertEqual(create[2:], ['--name', 'codex-api-probe', '--cpus', '2', '--memory', '4g', '--skills', 'off'])
+        self.assertEqual(create[2:], [
+            '--kit', str(ROOT / 'sandbox/kits/project-openai'),
+            '--name', 'codex-api-probe-r2', '--cpus', '2', '--memory', '4g',
+            '--skills', 'off', '--env', 'OPENAI_API_KEY=proxy-managed'])
         self.assertFalse(any(c[0] in ('rm', 'settings', 'policy') for c in calls))
         self.assertFalse(any(c[:3] == ['secret', 'set', 'openai'] for c in calls))
-        self.assertEqual(sum(c[:2] == ['kit', 'add'] for c in calls), 1)
+        self.assertFalse(any(c[0] == 'kit' for c in calls))
+        self.assertLess(calls.index(create), calls.index(
+            ['secret', 'set', 'project-openai', '--sandbox', 'codex-api-probe-r2']))
 
     def test_refuses_project_names_and_old_versions(self):
         self.assertNotEqual(self.run_probe('create', 'ass').returncode, 0)
@@ -136,7 +141,7 @@ raise SystemExit('Unexpected probe command')
         self.assertEqual(self.calls(), [['--version']])
 
     def test_refuses_existing_or_unmarked_sandboxes(self):
-        self.env['EXISTING'] = 'ass\ncodex-api-probe'
+        self.env['EXISTING'] = 'ass\ncodex-api-probe-r2'
         self.assertNotEqual(self.run_probe('create').returncode, 0)
         self.assertFalse(any(c[0] == 'create' for c in self.calls()))
         self.assertNotEqual(self.run_probe('configure').returncode, 0)
@@ -147,28 +152,34 @@ raise SystemExit('Unexpected probe command')
         self.assertNotEqual(self.run_probe('create').returncode, 0)
         self.assertFalse(any(c[0] in ('secret', 'kit', 'cp') for c in self.calls()))
 
-    def test_secret_and_kit_failures_preserve_probe_without_false_success(self):
-        for failure in ('FAIL_SECRET', 'FAIL_KIT'):
-            with self.subTest(failure=failure):
-                self.log.unlink(missing_ok=True)
-                self.state.unlink(missing_ok=True)
-                self.env.pop('FAIL_SECRET', None)
-                self.env.pop('FAIL_KIT', None)
-                self.env[failure] = '1'
-                result = self.run_probe('create')
-                self.assertNotEqual(result.returncode, 0)
-                self.assertTrue(json.loads(self.state.read_text())['exists'])
-                self.assertFalse(any(c[0] in ('rm', 'cp') for c in self.calls()))
-                self.assertIn('configure', result.stderr)
+    def test_secret_failure_preserves_probe_without_false_success(self):
+        self.env['FAIL_SECRET'] = '1'
+        result = self.run_probe('create')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(json.loads(self.state.read_text())['exists'])
+        self.assertFalse(any(c[0] in ('rm', 'cp', 'kit') for c in self.calls()))
+        self.assertIn('configure', result.stderr)
 
-    def test_configure_can_resume_after_kit_failure(self):
-        self.env['FAIL_KIT'] = '1'
+    def test_configure_can_resume_after_secret_failure_without_adding_kits(self):
+        self.env['FAIL_SECRET'] = '1'
         self.assertNotEqual(self.run_probe('create').returncode, 0)
-        self.env.pop('FAIL_KIT')
+        self.env.pop('FAIL_SECRET')
         self.assertEqual(self.run_probe('configure').returncode, 0)
         self.log.unlink()
         self.assertEqual(self.run_probe('configure').returncode, 0)
         self.assertFalse(any(c[:2] == ['kit', 'add'] for c in self.calls()))
+
+    def test_old_kit_add_probe_cannot_be_configured_or_verified(self):
+        self.state.write_text(json.dumps({
+            'exists': True,
+            '/home/agent/.config/dotfiles/oauth-api-probe/created': True,
+        }))
+        for action in ('configure', 'verify'):
+            with self.subTest(action=action):
+                result = self.run_probe(action, 'codex-api-probe')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('creation-time API wiring', result.stderr)
+        self.assertFalse(any(c[0] in ('create', 'secret', 'kit', 'rm', 'cp') for c in self.calls()))
 
     def test_verify_is_read_only_for_secrets_and_propagates_failure(self):
         self.assertEqual(self.run_probe('create').returncode, 0)

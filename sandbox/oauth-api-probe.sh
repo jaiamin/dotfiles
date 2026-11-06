@@ -6,7 +6,7 @@ die() { printf '%s\n' "$*" >&2; exit 1; }
 usage='Usage: oauth-api-probe.sh create|configure|verify [codex-api-probe[-SUFFIX]]'
 [[ $# -ge 1 && $# -le 2 ]] || die "$usage"
 action=$1
-name=${2:-codex-api-probe}
+name=${2:-codex-api-probe-r2}
 case $action in create | configure | verify) ;; *) die "$usage" ;; esac
 [[ $name =~ ^codex-api-probe(-[a-z0-9][a-z0-9-]*)?$ && ${#name} -le 48 ]] ||
   die 'Only dedicated codex-api-probe names are allowed; project sandboxes are refused.'
@@ -22,33 +22,31 @@ if [[ $action == create ]]; then
   while IFS= read -r item; do
     [[ $item != "$name" ]] || die "Sandbox $name already exists. Use configure or verify; it will not be recreated."
   done <<<"$existing"
+  printf 'Approve both kit credentials during creation, even if project-openai says not set.\n'
   # Source builds use sbx's builder sandbox when host Docker is unavailable.
-  sbx create "$here/kits/codex-oauth" --name "$name" --cpus 2 --memory 4g --skills off
+  # Credential-bearing mixins must be declared at creation: kit add cannot wire them.
+  # The public sentinel keeps SDK lookup working before the scoped key is stored.
+  sbx create "$here/kits/codex-oauth" --kit "$here/kits/project-openai" \
+    --name "$name" --cpus 2 --memory 4g --skills off --env OPENAI_API_KEY=proxy-managed
   sbx exec -u 1000 "$name" -- mkdir -p "$marker"
-  sbx exec -u 1000 "$name" -- touch "$marker/created"
+  sbx exec -u 1000 "$name" -- touch "$marker/created-with-api-kit"
 fi
 
 # A name alone is not proof that this helper created the sandbox.
-sbx exec -u 1000 "$name" -- test -f "$marker/created"
+if ! sbx exec -u 1000 "$name" -- test -f "$marker/created-with-api-kit"; then
+  die 'Probe lacks creation-time API wiring. Create a new probe with a fresh name; configure cannot repair the original kit-add probe.'
+fi
 if [[ $action == create || $action == configure ]]; then
   if ! sbx exec -u 1000 "$name" -- sh -c 'command -v python3 >/dev/null'; then
     sbx exec -u root "$name" -- sh -c \
       'set -eu; apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y python3 ca-certificates'
   fi
   printf '\nEnter your OpenAI platform API key at the sbx prompt. It is stored only for %s.\n' "$name"
-  printf 'Approve project-openai only for api.openai.com when the kit asks.\n'
   if ! sbx secret set project-openai --sandbox "$name"; then
     die "API-key setup failed. The probe is preserved; retry: bash $here/oauth-api-probe.sh configure $name"
   fi
-  if ! sbx exec -u 1000 "$name" -- test -f "$marker/project-kit-added"; then
-    if ! sbx kit add "$name" "$here/kits/project-openai"; then
-      die "Kit setup failed. The probe and its scoped secret are preserved; retry: bash $here/oauth-api-probe.sh configure $name"
-    fi
-    sbx exec -u 1000 "$name" -- touch "$marker/project-kit-added"
-  fi
 fi
 
-sbx exec -u 1000 "$name" -- test -f "$marker/project-kit-added"
 sbx cp "$here/oauth_api_verify.py" "$name:$marker/verify.py"
 printf '\nTesting one small project API request and one Codex OAuth turn.\n'
 sbx exec -u 1000 "$name" -- python3 "$marker/verify.py"
