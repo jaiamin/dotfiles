@@ -2,7 +2,7 @@
 
 One mountless sandbox per project; one task branch/worktree per writer.
 T3's UI runs on the Mac. Its server, agents, checkout, builds, and dependencies run in Linux.
-Requires Docker Sandboxes 0.37.0+, T3 Code, and a Debian/Ubuntu agent template with Node/npm.
+Requires Docker Sandboxes 0.51.0+, T3 Code, and a Debian/Ubuntu agent template with Node/npm.
 
 ## One-time setup
 
@@ -33,7 +33,8 @@ bash sandbox/manage.sh refresh my-project owner/repo true
 ```
 
 The repo needs an initial commit. Defaults: 4 CPUs, 4 GiB, read-only shared skills,
-and Docker's T3 kit with telemetry off. `true` adds agent-browser/Chromium.
+and the v3 `docker.io/sbx/t3code:latest` kit with telemetry off. `true` adds agent-browser/Chromium.
+Additional kits must also be v3; legacy v1/v2 kits cannot be mixed with built-in agents.
 Use `codex` or `opencode` instead of `claude`; append `-- --memory 8g` to change resources.
 
 In T3: **Settings → Environments → Add environment → SSH**, host `my-project.sbx`.
