@@ -2,7 +2,8 @@
 
 One mountless sandbox per project; one task branch/worktree per writer.
 T3's UI runs on the Mac. Its server, agents, checkout, builds, and dependencies run in Linux.
-Requires Docker Sandboxes 0.51.0+, T3 Code, and a Debian/Ubuntu agent template with Node/npm.
+Requires Docker Sandboxes 0.51.0+, T3 Code, and a Debian/Ubuntu agent template.
+Bootstrap installs guest-local Node.js 24 LTS/npm when Node 22+ and working npm/npx are unavailable.
 
 ## One-time setup
 
@@ -58,12 +59,12 @@ Docker enforces isolation. Agent instructions do not enforce GitHub merge permis
 
 ## Maintenance and checks
 
-`refresh` installs missing T3 tooling and updates instructions without changing branches,
+`refresh` repairs Node/npm, installs missing T3 tooling, and updates instructions without changing branches,
 dirty files, hooks, or auth. It does not upgrade installed T3/provider binaries.
 Update skills with `sbx skills update`; update T3 and providers between sessions.
 T3's built-in browser is separate from agent-browser and may need additional guest setup.
 
-`check` verifies non-interactive SSH, the T3 executable, checkout, instructions, and provider
+`check` verifies non-interactive SSH, Node/npm, T3, a committed checkout with an origin remote, instructions, and provider
 CLI discovery. Also test login, skills, GitHub push, a build, two worktrees, and restart/reconnect
 in T3 before merging. CI covers provisioning, Git, chezmoi, syntax, and secrets, not live providers.
 

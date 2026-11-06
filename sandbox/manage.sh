@@ -28,10 +28,13 @@ set -euo pipefail
   exit 1
 }
 test -f "$HOME/.config/dotfiles/managed"
+node --version
+npm --version
 command -v t3 >/dev/null || { echo 'T3 is missing; run manage.sh refresh.' >&2; exit 1; }
 t3 --version
 test -f "$HOME/.config/dotfiles/AGENTS.md"
 git -C /home/agent/workspace rev-parse --verify HEAD >/dev/null
+git -C /home/agent/workspace remote get-url origin >/dev/null
 found=false
 for provider in claude codex opencode; do
   if command -v "$provider" >/dev/null; then
@@ -99,12 +102,12 @@ if [[ $action == create ]]; then
   sbx create "$agent" --name "$name" "${options[@]}"
   # Explicit setup/service domains; keep the rest of the sandbox policy intact.
   sbx policy allow network --sandbox "$name" \
-    'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com,registry.npmjs.org,astral.sh,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com,cdn.playwright.dev,playwright.download.prss.microsoft.com,storage.googleapis.com,context7.com,mcp.context7.com'
+    'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com,registry.npmjs.org,nodejs.org,astral.sh,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com,cdn.playwright.dev,playwright.download.prss.microsoft.com,storage.googleapis.com,context7.com,mcp.context7.com'
 else
   sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed
   # Existing sandboxes need the same setup destinations as new ones.
   sbx policy allow network --sandbox "$name" \
-    'registry.npmjs.org,github.com,release-assets.githubusercontent.com,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com'
+    'registry.npmjs.org,nodejs.org,github.com,release-assets.githubusercontent.com,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com'
 fi
 destination=/home/agent/.config/dotfiles/source
 sbx exec -u 1000 "$name" -- mkdir -p "$destination"

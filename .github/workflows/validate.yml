@@ -98,7 +98,9 @@ jobs:
            
           PY
 
-      - name: Test sandbox provisioning boundaries
+      - name: Test sandbox provisioning boundaries and real Node runtime
+        env:
+          TEST_NODE_DOWNLOAD: "1"
         run: python3 -m unittest discover -s tests -v
 
       - name: Lint GitHub Actions workflows

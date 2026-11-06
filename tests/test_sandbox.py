@@ -3,6 +3,9 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sys
+import io
+import tarfile
 import subprocess
 import tempfile
 import unittest
@@ -137,6 +140,182 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         result = subprocess.run(['bash',str(BOOTSTRAP)],env=self.env,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('inside a Docker Sandbox',result.stderr)
+
+
+def node_setup_source():
+    source = BOOTSTRAP.read_text()
+    start = source.index('ensure_node() (')
+    end = source.index('\nif [[ ',start)
+    return source[start:end]
+
+
+class NodeBootstrapTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.bin = self.root/'bin'
+        self.bin.mkdir()
+        self.local = self.root/'.local/bin'
+        self.local.mkdir(parents=True)
+        self.env = dict(os.environ, HOME=str(self.root), PATH=f'{self.local}:{self.bin}',
+                        GIT_CONFIG_NOSYSTEM='1',TEST_ARCH='x86_64')
+        self.env.pop('GIT_CONFIG_GLOBAL',None)
+        self.bash = shutil.which(HOST_BASH)
+        for name in ('awk','mktemp','mkdir','tar','gzip','ln','rm'):
+            (self.bin/name).symlink_to(shutil.which(name))
+        self.tool('sha256sum',f'#!{sys.executable}\n'+'''import hashlib, pathlib, sys
+digest,name=pathlib.Path(sys.argv[-1]).read_text().split()
+sys.exit(0 if hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==digest else 1)
+''')
+        self.tool('uname','#!/bin/sh\nif [ "$1" = -m ]; then echo "$TEST_ARCH"; else echo Linux; fi\n')
+        self.fixtures = self.root/'fixtures'
+        self.fixtures.mkdir()
+        for arch in ('x64','arm64'):
+            filename = f'node-v24.22.2-linux-{arch}.tar.gz'
+            with tarfile.open(self.fixtures/filename,'w:gz') as archive:
+                for tool in ('node','npm','npx'):
+                    content = ('#!/bin/sh\nif [ "$1" = -p ]; then echo 24; else echo v24.22.2; fi\n'
+                               if tool=='node' else '#!/bin/sh\necho 11.0.0\n').encode()
+                    entry = tarfile.TarInfo(f'node-v24.22.2-linux-{arch}/bin/{tool}')
+                    entry.mode = 0o755
+                    entry.size = len(content)
+                    archive.addfile(entry,io.BytesIO(content))
+        self.tool('curl',f'#!{sys.executable}\n'+'''import hashlib, json, os, pathlib, shutil, sys
+root=pathlib.Path(os.environ['HOME'])
+args=sys.argv[1:]
+with (root/'downloads.jsonl').open('a') as log: log.write(json.dumps(args)+'\\n')
+if os.environ.get('FAIL_DOWNLOAD'): sys.exit(22)
+url=args[0] if not args[0].startswith('-') else args[1]
+dest=pathlib.Path(args[args.index('-o')+1])
+arch='arm64' if os.environ.get('TEST_ARCH') in ('arm64','aarch64') else 'x64'
+name=f'node-v24.22.2-linux-{arch}.tar.gz'
+fixture=root/'fixtures'/name
+if url.endswith('SHASUMS256.txt'):
+    digest='0'*64 if os.environ.get('BAD_CHECKSUM') else hashlib.sha256(fixture.read_bytes()).hexdigest()
+    dest.write_text(f'{digest}  {name}\\n')
+else: shutil.copyfile(fixture,dest)
+''')
+        self.script=self.root/'node-setup.sh'
+        self.script.write_text('set -euo pipefail\n'+node_setup_source()+'\nensure_node\n')
+
+    def tool(self,name,content):
+        path=self.bin/name
+        if path.is_symlink():
+            path.unlink()
+        path.write_text(content)
+        path.chmod(0o755)
+
+    def run_setup(self):
+        return subprocess.run([self.bash,str(self.script)],env=self.env,capture_output=True,text=True)
+
+    def test_missing_node_installs_checked_runtime_for_both_architectures(self):
+        for arch in ('x86_64','aarch64'):
+            with self.subTest(arch=arch):
+                for tool in self.local.iterdir():
+                    tool.unlink()
+                self.env['TEST_ARCH']=arch
+                result=self.run_setup()
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertIn('v24.22.2',result.stdout)
+                self.assertTrue((self.local/'node').is_symlink())
+                before=(self.root/'downloads.jsonl').read_text()
+                self.assertEqual(self.run_setup().returncode,0)
+                self.assertEqual((self.root/'downloads.jsonl').read_text(),before)
+
+    def test_compatible_runtime_is_preserved(self):
+        self.tool('node','#!/bin/sh\necho 22\n')
+        for tool in ('npm','npx'):
+            self.tool(tool,'#!/bin/sh\nexit 0\n')
+        self.assertEqual(self.run_setup().returncode,0)
+        self.assertFalse((self.root/'downloads.jsonl').exists())
+        self.assertFalse((self.local/'node').exists())
+
+    def test_missing_npm_repairs_runtime(self):
+        self.tool('node','#!/bin/sh\necho 24\n')
+        result=self.run_setup()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertTrue((self.local/'npm').is_symlink())
+
+    def test_checksum_failure_never_installs_runtime(self):
+        self.env['BAD_CHECKSUM']='1'
+        self.assertNotEqual(self.run_setup().returncode,0)
+        self.assertFalse((self.local/'node').exists())
+
+    def test_download_failure_never_installs_runtime(self):
+        self.env['FAIL_DOWNLOAD']='1'
+        self.assertNotEqual(self.run_setup().returncode,0)
+        self.assertFalse((self.local/'node').exists())
+
+    def exercise_full_bootstrap(self,marked):
+        for name in ('cat','install','chmod','dirname','grep','tee','git','env','touch'):
+            (self.bin/name).symlink_to(shutil.which(name))
+        self.tool('id','#!/bin/sh\necho 1000\n')
+        self.tool('sudo',f'#!{sys.executable}\nimport os,sys\nos.execvpe(sys.argv[1],sys.argv[1:],os.environ)\n')
+        self.tool('apt-get','#!/bin/sh\nexit 0\n')
+        for name in ('uv','pnpm','gitleaks'):
+            self.tool(name,'#!/bin/sh\nexit 0\n')
+        self.tool('t3','#!/bin/sh\nexec node --version\n')
+        def git(*args):
+            return subprocess.run([str(self.bin/'git'),*args],env=self.env,
+                                  capture_output=True,text=True,check=True)
+        git('config','--global','user.name','Test')
+        git('config','--global','user.email','test@example.invalid')
+        seed=self.root/'seed'
+        git('init','-b','trunk',str(seed))
+        (seed/'README').write_text('initial\n')
+        git('-C',str(seed),'add','README')
+        git('-C',str(seed),'commit','-m','initial')
+        remotes=self.root/'remotes'
+        (remotes/'owner').mkdir(parents=True)
+        git('clone','--bare',str(seed),str(remotes/'owner/repo.git'))
+        git('config','--global',f'url.{remotes.as_uri()}/.insteadOf','https://github.com/')
+        source=self.root/'source'
+        source.mkdir()
+        for name in ('base.md','AGENTS.md','gitignore'):
+            (source/name).write_text('fixture\n')
+        # Map only sandbox filesystem constants into this disposable test home.
+        script=source/'bootstrap.sh'
+        script.write_text(BOOTSTRAP.read_text().replace('/home/agent',str(self.root))
+                          .replace('/etc/sandbox-persistent.sh',str(self.root/'persistent.sh')))
+        if marked:
+            state=self.root/'.local/state/dotfiles'
+            state.mkdir(parents=True)
+            (state/'tools-v1').touch()
+        result=subprocess.run([self.bash,str(script),'owner/repo','false','Test','test@example.invalid'],
+                              env=self.env,capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        workspace=self.root/'workspace'
+        self.assertEqual(git('-C',str(workspace),'config','--get','remote.origin.url').stdout.strip(),
+                         'https://github.com/owner/repo.git')
+        self.assertEqual((workspace/'README').read_text(),'initial\n')
+        self.assertTrue((self.local/'node').exists())
+        self.assertIn('Ready:',result.stdout)
+
+    def test_fresh_image_without_node_reaches_repository_clone(self):
+        self.exercise_full_bootstrap(marked=False)
+
+    def test_refresh_with_old_tools_marker_repairs_node_and_clones(self):
+        self.exercise_full_bootstrap(marked=True)
+
+
+@unittest.skipUnless(os.environ.get('TEST_NODE_DOWNLOAD')=='1','real Linux runtime download is CI-only')
+class NodeDownloadTests(unittest.TestCase):
+    def test_official_archive_supplies_working_node_npm_and_npx(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve()
+            bin_dir=root/'bin'
+            bin_dir.mkdir()
+            for name in ('awk','mktemp','mkdir','tar','gzip','sha256sum','ln','rm','curl','uname'):
+                (bin_dir/name).symlink_to(shutil.which(name))
+            env=dict(os.environ,HOME=str(root),PATH=f'{root}/.local/bin:{bin_dir}')
+            script=root/'setup.sh'
+            script.write_text('set -euo pipefail\n'+node_setup_source()+'\nensure_node\n')
+            result=subprocess.run([shutil.which(HOST_BASH),str(script)],env=env,
+                                  capture_output=True,text=True,timeout=180)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('v24.22.2',result.stdout)
+            self.assertTrue((root/'.local/bin/npm').exists())
 
 
 class T3BootstrapTests(unittest.TestCase):
