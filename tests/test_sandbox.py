@@ -15,9 +15,8 @@ HOST_BASH = os.environ.get('TEST_BASH', 'bash')
 
 class ManagerTests(unittest.TestCase):
     def test_native_preferences_exclude_generated_runtime_snapshots(self):
-        claude = (ROOT/'dot_claude/settings.json').read_text()
-        self.assertNotIn('.orca/agent-hooks', claude)
-        self.assertNotIn('herdr-agent-state', claude)
+        claude = json.loads((ROOT/'dot_claude/settings.json').read_text())
+        self.assertNotIn('hooks', claude)
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -49,7 +48,7 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.calls()
         create = next(x for x in calls if x[0] == 'create')
-        self.assertEqual(create, ['create','codex','--name','my-project','--cpus','4','--memory','4g','--skills','readonly'])
+        self.assertEqual(create, ['create','codex','--name','my-project','--cpus','4','--memory','4g','--skills','readonly','--kit','docker.io/sbx/t3code-kit:latest'])
         self.assertFalse(any(x[0] == 'run' for x in calls))
         copied = [x[1] for x in calls if x[0] == 'cp']
         self.assertEqual(len(copied), 4)
@@ -72,8 +71,8 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
             ('create','my-project','owner/repo','claude','yes'),
             ('create','my-project','owner/repo','claude','--','--mount','/Users/jai:/work'),
             ('create','my-project','owner/repo','claude','--','.'),
-            ('orca','my-project','80'),
-            ('orca','my-project','06768'),
+            ('check','my-project','extra'),
+            ('serve','my-project'),
         ]
         for args in cases:
             with self.subTest(args=args):
@@ -95,16 +94,108 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
         self.assertNotEqual(self.run_manager('refresh','my-project','owner/repo').returncode,0)
         self.assertEqual(len(self.calls()),1)
 
-    def test_orca_requires_managed_sandbox_before_detaching(self):
-        self.env['UNMANAGED']='1'
-        self.assertNotEqual(self.run_manager('orca','my-project').returncode,0)
-        self.assertFalse(any(x[0]=='run' for x in self.calls()))
+    def test_check_uses_managed_sandbox_and_noninteractive_ssh(self):
+        ssh = self.bin / 'ssh'
+        ssh.write_text('''#!/usr/bin/env python3
+import json, os, sys
+with open(os.environ['MOCK_LOG'],'a') as f: f.write(json.dumps(['ssh',*sys.argv[1:]])+'\\n')
+sys.stdin.read()
+sys.exit(int(os.environ.get('SSH_FAIL','0')))
+''')
+        ssh.chmod(0o755)
+        result = self.run_manager('check','my-project')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(self.calls(),[
+            ['exec','-u','1000','my-project','--','test','-f','/home/agent/.config/dotfiles/managed'],
+            ['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10','my-project.sbx','bash -s'],
+        ])
+        self.env['SSH_FAIL']='1'
+        self.assertNotEqual(self.run_manager('check','my-project').returncode,0)
 
-    def test_guest_scripts_refuse_native_execution(self):
-        for script in (BOOTSTRAP, ROOT/'sandbox/orca.sh'):
-            result = subprocess.run(['bash',str(script)],env=self.env,capture_output=True,text=True)
-            self.assertNotEqual(result.returncode,0)
-            self.assertIn('inside a Docker Sandbox',result.stderr)
+    def test_check_refuses_unmanaged_sandbox_before_ssh(self):
+        self.env['UNMANAGED']='1'
+        self.assertNotEqual(self.run_manager('check','my-project').returncode,0)
+        self.assertEqual(len(self.calls()),1)
+
+    def test_refresh_enables_t3_setup_without_mounting_or_starting_an_agent(self):
+        result = self.run_manager('refresh','my-project','owner/repo')
+        self.assertEqual(result.returncode,0,result.stderr)
+        calls = self.calls()
+        self.assertEqual(calls[0],['exec','-u','1000','my-project','--','test','-f','/home/agent/.config/dotfiles/managed'])
+        policy = next(x for x in calls if x[0]=='policy')
+        self.assertIn('registry.npmjs.org',policy[-1])
+        self.assertFalse(any(x[0] in ('create','run','ports','rm') for x in calls))
+
+    def test_guest_script_refuses_native_execution(self):
+        result = subprocess.run(['bash',str(BOOTSTRAP)],env=self.env,capture_output=True,text=True)
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn('inside a Docker Sandbox',result.stderr)
+
+
+class T3BootstrapTests(unittest.TestCase):
+    def setUp(self):
+        import sys
+        self.python = sys.executable
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.bin = self.root/'bin'
+        self.bin.mkdir()
+        self.local = self.root/'.local/bin'
+        self.local.mkdir(parents=True)
+        self.env = dict(os.environ, HOME=str(self.root), PATH=f'{self.local}:{self.bin}')
+        for key in ('HTTP_PROXY','HTTPS_PROXY','http_proxy','https_proxy'):
+            self.env.pop(key,None)
+        source = BOOTSTRAP.read_text()
+        section = source[source.index('# T3 readiness'):source.index('# sbx sources this')]
+        self.script = self.root/'t3-setup.sh'
+        self.script.write_text('set -euo pipefail\n'+section)
+        self.log = self.root/'npm.json'
+        npm = self.bin/'npm'
+        npm.write_text(f'#!{self.python}\n'+'''import json, os, pathlib, sys
+root = pathlib.Path(os.environ['HOME'])
+(root/'npm.json').write_text(json.dumps(sys.argv[1:]))
+if os.environ.get('FAIL_NPM'): sys.exit(17)
+binary = root/'.local/bin/t3'
+binary.write_text('#!/bin/sh\\nexit 0\\n')
+binary.chmod(0o755)
+''')
+        npm.chmod(0o755)
+        self.bash = shutil.which(HOST_BASH)
+
+    def setup_t3(self):
+        return subprocess.run([self.bash,str(self.script)],env=self.env,capture_output=True,text=True)
+
+    def test_installs_missing_t3_in_guest_home_with_proxy(self):
+        self.env.update(HTTP_PROXY='http://proxy.invalid:3128',HTTPS_PROXY='http://secure-proxy.invalid:3128')
+        result = self.setup_t3()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(json.loads(self.log.read_text()),[
+            'install','--global','--prefix',str(self.root/'.local'),
+            '--proxy','http://proxy.invalid:3128',
+            '--https-proxy','http://secure-proxy.invalid:3128','t3@latest',
+        ])
+        self.log.unlink()
+        self.assertEqual(self.setup_t3().returncode,0)
+        self.assertFalse(self.log.exists())
+
+    def test_http_proxy_also_supplies_https_fallback(self):
+        self.env['HTTP_PROXY']='http://proxy.invalid:3128'
+        self.assertEqual(self.setup_t3().returncode,0)
+        args = json.loads(self.log.read_text())
+        self.assertEqual(args[args.index('--https-proxy')+1],self.env['HTTP_PROXY'])
+
+    def test_existing_broken_t3_fails_without_reinstalling(self):
+        binary = self.local/'t3'
+        binary.write_text('#!/bin/sh\nexit 19\n')
+        binary.chmod(0o755)
+        self.assertEqual(self.setup_t3().returncode,19)
+        self.assertFalse(self.log.exists())
+
+    def test_install_failure_is_not_reported_as_ready(self):
+        self.env['FAIL_NPM']='1'
+        self.assertEqual(self.setup_t3().returncode,17)
+        self.assertFalse((self.local/'t3').exists())
 
 
 class GitTests(unittest.TestCase):

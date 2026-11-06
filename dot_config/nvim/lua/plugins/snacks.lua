@@ -5,7 +5,7 @@ return {
       picker = {
         sources = {
           explorer = {
-	    hidden = true,
+            hidden = true,
             layout = {
               layout = { width = 30 },
             },

@@ -5,5 +5,7 @@ __pycache__/
 # Generated hook scripts and ADE runtime state. Portable preferences stay tracked.
 /dot_codex/hooks.json
 /dot_claude/hooks/
-/dot_orca/
 /dot_config/herdr/
+
+# T3 runtime, credentials, and histories are local state.
+/dot_t3/

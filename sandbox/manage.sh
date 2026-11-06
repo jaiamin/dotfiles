@@ -7,7 +7,7 @@ die() {
 }
 usage='Usage: manage.sh create NAME OWNER/REPO AGENT [false|true] [-- SBX_OPTIONS...]
        manage.sh refresh NAME OWNER/REPO [false|true]
-       manage.sh orca NAME [PORT]'
+       manage.sh check NAME'
 [[ $# -ge 2 ]] || die "$usage"
 action=$1 name=$2
 shift 2
@@ -16,16 +16,35 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd -- "$here/.." && pwd)
 command -v sbx >/dev/null || die 'Install Docker Sandboxes (sbx) first.'
 
-if [[ $action == orca ]]; then
-  [[ $# -le 1 ]] || die "$usage"
-  port=${1:-6768}
-  [[ $port =~ ^[1-9][0-9]{3,4}$ && $port -ge 1024 && $port -le 65535 ]] || die 'Invalid port.'
+if [[ $action == check ]]; then
+  [[ $# -eq 0 ]] || die "$usage"
+  command -v ssh >/dev/null || die 'Missing SSH client.'
   sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed
-  sbx run --detach --name "$name"
-  sbx exec -u 1000 "$name" -- mkdir -p /home/agent/.config/dotfiles/source
-  sbx cp "$here/orca.sh" "$name:/home/agent/.config/dotfiles/source/orca.sh"
-  sbx ports "$name" --publish "$port:$port"
-  sbx exec -u 1000 "$name" -- bash /home/agent/.config/dotfiles/source/orca.sh "$port"
+  # Exercise the same non-interactive SSH path used by the T3 desktop app.
+  ssh -o BatchMode=yes -o ConnectTimeout=10 "$name.sbx" 'bash -s' <<'CHECK'
+set -euo pipefail
+[[ $(uname -s) == Linux && $HOME == /home/agent && $(id -u) == 1000 ]] || {
+  echo 'Expected a Docker Sandbox running as agent.' >&2
+  exit 1
+}
+test -f "$HOME/.config/dotfiles/managed"
+command -v t3 >/dev/null || { echo 'T3 is missing; run manage.sh refresh.' >&2; exit 1; }
+t3 --version
+test -f "$HOME/.config/dotfiles/AGENTS.md"
+git -C /home/agent/workspace rev-parse --verify HEAD >/dev/null
+found=false
+for provider in claude codex opencode; do
+  if command -v "$provider" >/dev/null; then
+    printf 'Available provider: %s\n' "$provider"
+    found=true
+  fi
+done
+[[ $found == true ]] || {
+  echo 'No Claude, Codex, or OpenCode CLI found. Install a supported provider in this sandbox.' >&2
+  exit 1
+}
+printf 'SSH, T3, instructions, and checkout are ready. Verify provider authentication in T3.\n'
+CHECK
   exit
 fi
 
@@ -52,7 +71,7 @@ fi
 [[ $action != refresh || $# -eq 0 ]] || die "$usage"
 # Only resource, template, and kit options may be forwarded. No workspace mounts.
 # Keep this nonempty: macOS's Bash 3.2 treats empty arrays as unset under nounset.
-options=(--cpus 4 --memory 4g --skills readonly)
+options=(--cpus 4 --memory 4g --skills readonly --kit docker.io/sbx/t3code-kit:latest)
 while [[ $# -gt 0 ]]; do
   case $1 in
     --cpus | --memory | --template | --pull | --kit | --kit-arg | --kit-args-file)
@@ -79,9 +98,12 @@ if [[ $action == create ]]; then
   sbx create "$agent" --name "$name" "${options[@]}"
   # Explicit setup/service domains; keep the rest of the sandbox policy intact.
   sbx policy allow network --sandbox "$name" \
-    'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com,registry.npmjs.org,astral.sh,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,cdn.playwright.dev,playwright.download.prss.microsoft.com,storage.googleapis.com,context7.com,mcp.context7.com'
+    'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com,registry.npmjs.org,astral.sh,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com,cdn.playwright.dev,playwright.download.prss.microsoft.com,storage.googleapis.com,context7.com,mcp.context7.com'
 else
   sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed
+  # Existing sandboxes need the same setup destinations as new ones.
+  sbx policy allow network --sandbox "$name" \
+    'registry.npmjs.org,github.com,release-assets.githubusercontent.com,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com'
 fi
 destination=/home/agent/.config/dotfiles/source
 sbx exec -u 1000 "$name" -- mkdir -p "$destination"
@@ -95,4 +117,5 @@ sbx exec -u 1000 "$name" -- bash "$destination/bootstrap.sh" \
   "$repo" "$browser" "$git_name" "$git_email"
 printf '\nSSH: %s.sbx (user _default_user_, no identity file)\n' "$name"
 printf 'Remote repository: /home/agent/workspace\n'
-printf 'Orca full runtime, optional beta: bash sandbox/manage.sh orca %s\n' "$name"
+printf 'T3 Code: add SSH environment %s.sbx, then add /home/agent/workspace.\n' "$name"
+printf 'Check connection: bash sandbox/manage.sh check %s\n' "$name"

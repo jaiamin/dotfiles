@@ -1,9 +1,9 @@
-% sandbox, orca
+% sandbox, t3
 
-# Create project sandbox for Orca (once per project)
+# Create project sandbox for T3 Code (once per project)
 bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>"
 
-# Start or resume sandbox for Orca (keeps running until stopped)
+# Start or resume sandbox for T3 Code (keeps running until stopped)
 sbx run --detach --name "<sandbox>"
 
 # Stop sandbox, preserving files
@@ -27,19 +27,16 @@ sbx skills update
 # Delete sandbox and its files (push work first; asks for confirmation)
 sbx rm "<sandbox>"
 
-; Optional full Orca runtime
+# Check T3 readiness over SSH (does not verify provider login)
+bash "$(chezmoi source-path)/sandbox/manage.sh" check "<sandbox>"
 
-# Start full Orca server (optional beta; unique port per sandbox)
-bash "$(chezmoi source-path)/sandbox/manage.sh" orca "<sandbox>" <port>
+# Show the SSH host and project folder to add in T3 Code
+printf 'SSH environment: %s.sbx\nProject directory: /home/agent/workspace\n' "<sandbox>"
 
-# Show private Orca pairing link or startup errors (do not share)
-sbx exec "<sandbox>" -- cat /home/agent/.local/state/dotfiles/orca/server.log
-
-$ agent: printf '%s\n' claude codex opencode copilot cursor devin docker-agent droid gemini kiro shell
+$ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
-$ port: printf '%s\n' 6768 6769 6770
 
 % github, project
 

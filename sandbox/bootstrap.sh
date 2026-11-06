@@ -82,15 +82,29 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
     rm -rf -- "$tmp_dir"
     trap - EXIT
   fi
-  # sbx sources this for agent sessions and interactive shells. Preserve its contents.
-  # The persistent guest shell must expand these variables at session startup.
-  # shellcheck disable=SC2016
-  path_line='export PATH="$HOME/.local/bin:$PATH"'
-  if ! sudo grep -Fxq -- "$path_line" /etc/sandbox-persistent.sh 2>/dev/null; then
-    printf '\n%s\n' "$path_line" | sudo tee -a /etc/sandbox-persistent.sh >/dev/null
-  fi
   touch "$state_dir/tools-v1"
 fi
+
+# T3 readiness also runs on refresh of an existing managed sandbox.
+# New sandboxes receive t3 from Docker's kit; older ones install it here.
+if ! command -v t3 >/dev/null; then
+  t3_options=(--global --prefix "$HOME/.local")
+  [[ -z ${HTTP_PROXY:-} ]] || t3_options+=(--proxy "$HTTP_PROXY")
+  [[ -z ${HTTPS_PROXY:-${HTTP_PROXY:-}} ]] || t3_options+=(--https-proxy "${HTTPS_PROXY:-$HTTP_PROXY}")
+  npm install "${t3_options[@]}" t3@latest
+fi
+# Fail provisioning now if a native dependency is missing, rather than timing out in T3.
+t3 --version
+
+# sbx sources this for agent sessions and non-interactive SSH shells.
+# Preserve existing settings, and let an explicit telemetry preference win.
+# shellcheck disable=SC2016
+for setting in 'export PATH="$HOME/.local/bin:$PATH"' \
+  'export T3CODE_TELEMETRY_ENABLED="${T3CODE_TELEMETRY_ENABLED:-false}"'; do
+  if ! sudo grep -Fxq -- "$setting" /etc/sandbox-persistent.sh 2>/dev/null; then
+    printf '\n%s\n' "$setting" | sudo tee -a /etc/sandbox-persistent.sh >/dev/null
+  fi
+done
 
 # One generated instruction file, shared by all supported agent locations.
 mkdir -p "$HOME/.config/dotfiles" "$HOME/.claude" "$HOME/.codex" "$HOME/.config/opencode" "$HOME/.config/git"
@@ -138,7 +152,7 @@ HOOK
   chmod 755 "$hook"
 fi
 
-# Task ownership belongs to Orca, the selected ADE, or ordinary Git worktrees.
+# Task ownership belongs to T3 Code or ordinary Git worktrees.
 # Never switch or reset the primary checkout during a refresh.
 git -C "$workspace" config pull.ff only
 if [[ $browser == true ]]; then
