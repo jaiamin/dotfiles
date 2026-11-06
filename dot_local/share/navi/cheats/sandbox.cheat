@@ -9,9 +9,6 @@ sbx run --detach --name "<sandbox>"
 # Stop sandbox, preserving files
 sbx stop "<sandbox>"
 
-# List sandboxes and status
-sbx ls
-
 # Inspect sandbox mounts and configuration
 sbx inspect "<sandbox>"
 
@@ -27,18 +24,20 @@ sbx skills update
 # Delete sandbox and its files (push work first; asks for confirmation)
 sbx rm "<sandbox>"
 
-# Check T3 readiness over SSH (does not verify provider login)
-bash "$(chezmoi source-path)/sandbox/manage.sh" check "<sandbox>"
+# Set project API key
+sbx secret set-custom --sandbox "<sandbox>" --host "<api_host>" --env "<key_name>"
 
-# Show the SSH host and project folder to add in T3 Code
-printf 'SSH environment: %s.sbx\nProject directory: /home/agent/workspace\n' "<sandbox>"
+# Remove project API key
+sbx secret rm --sandbox "<sandbox>" --env-name "<key_name>"
 
+# Create private GitHub repo with initial commit (no local checkout)
+gh repo create "<new_repo>" --private --add-readme
+
+$ api_host: printf '%s\n' api.openai.com api.anthropic.com
+$ key_name: printf '%s\n' PROJECT_OPENAI_API_KEY PROJECT_ANTHROPIC_API_KEY
 $ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
 
 % github, project
-
-# Create private GitHub repo with initial commit (no local checkout)
-gh repo create "<new_repo>" --private --add-readme
