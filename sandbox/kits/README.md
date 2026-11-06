@@ -12,8 +12,9 @@ OAuth declaration. The two services never claim the same resource host.
 
 The existing global `openai` OAuth login remains the source of Codex authentication.
 The helper stores the API key as `project-openai` scoped to the dedicated probe.
-It never stores an API key as `openai`, changes global secrets or bindings files,
-or puts a real key in a command argument, environment file, or sandbox file.
+It never stores an API key as `openai`, changes global secrets, edits bindings
+files directly, or puts a real key in a command argument, environment file, or
+sandbox file. Docker records approved kit bindings in its normal host store.
 Docker can request approval for these kit credentials; approve OpenAI OAuth only
 for `auth.openai.com`/`chatgpt.com`, and `project-openai` only for `api.openai.com`.
 
