@@ -28,7 +28,7 @@ sbx rm "<sandbox>"
 sbx secret set-custom --sandbox "<sandbox>" --host "<api_host>" --env "<key_name>"
 
 # Remove project API key
-sbx secret rm --sandbox "<sandbox>" --env-name "<key_name>"
+sbx secret rm --sandbox "<sandbox>" --host "<api_host>" --env-name "<key_name>"
 
 # Create private GitHub repo with initial commit (no local checkout)
 gh repo create "<new_repo>" --private --add-readme
