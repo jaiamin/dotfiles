@@ -1,5 +1,6 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
+tap "stablyai/orca", trusted: { casks: ["orca"] }
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
 # Static checker for GitHub Actions workflow files
@@ -84,14 +85,14 @@ cask "ghostty"
 cask "google-chrome"
 # GameStream client
 cask "moonlight"
-# GUI for coding agents running inside Docker Sandboxes over SSH
-cask "t3-code"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
 cask "docker/tap/sbx", trusted: true
 # Music streaming service
 cask "spotify"
+# Minimal GUI for AI code agents
+cask "t3-code"
 # Mesh VPN based on WireGuard
 cask "tailscale-app"
 # Open-source code editor
