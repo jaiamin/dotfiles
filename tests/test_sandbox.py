@@ -43,20 +43,27 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
     def calls(self):
         return [json.loads(x) for x in self.log.read_text().splitlines()] if self.log.exists() else []
 
-    def test_create_has_no_workspace_mount_or_agent_launch(self):
-        result = self.run_manager('create', 'my-project', 'owner/repo', 'codex', 'false')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        calls = self.calls()
-        create = next(x for x in calls if x[0] == 'create')
-        self.assertEqual(create, ['create','codex','--name','my-project','--cpus','4','--memory','4g','--skills','readonly','--kit','docker.io/sbx/t3code-kit:latest'])
-        self.assertFalse(any(x[0] == 'run' for x in calls))
-        copied = [x[1] for x in calls if x[0] == 'cp']
-        self.assertEqual(len(copied), 4)
-        self.assertFalse(any('dot_claude' in x or 'private_config' in x for x in copied))
-        self.assertIn('owner/repo', calls[-1])
+    def test_builtin_agents_use_v3_t3_without_workspace_mount_or_agent_launch(self):
+        for agent in ('codex','claude','opencode'):
+            with self.subTest(agent=agent):
+                if self.log.exists():
+                    self.log.unlink()
+                result = self.run_manager('create','my-project','owner/repo',agent,'false')
+                self.assertEqual(result.returncode,0,result.stderr)
+                calls = self.calls()
+                create = next(x for x in calls if x[0]=='create')
+                self.assertEqual(create,[
+                    'create',agent,'--name','my-project','--cpus','4','--memory','4g',
+                    '--skills','readonly','--kit','docker.io/sbx/t3code:latest',
+                ])
+                self.assertFalse(any(x[0]=='run' for x in calls))
+                copied = [x[1] for x in calls if x[0]=='cp']
+                self.assertEqual(len(copied),4)
+                self.assertFalse(any('dot_claude' in x or 'private_config' in x for x in copied))
+                self.assertIn('owner/repo',calls[-1])
 
     def test_agent_kit_reference_and_resource_options_are_preserved(self):
-        kit = 'docker.io/docker/sbx-kit-codex:0.155.1'
+        kit = 'docker.io/sbx/codex:latest'
         result = self.run_manager('create','my-project','owner/repo',kit,'true','--','--memory','8g')
         self.assertEqual(result.returncode,0,result.stderr)
         create = next(x for x in self.calls() if x[0]=='create')

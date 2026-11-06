@@ -71,7 +71,8 @@ fi
 [[ $action != refresh || $# -eq 0 ]] || die "$usage"
 # Only resource, template, and kit options may be forwarded. No workspace mounts.
 # Keep this nonempty: macOS's Bash 3.2 treats empty arrays as unset under nounset.
-options=(--cpus 4 --memory 4g --skills readonly --kit docker.io/sbx/t3code-kit:latest)
+# Built-in agents resolve to v3 kits; every companion kit must use v3 too.
+options=(--cpus 4 --memory 4g --skills readonly --kit docker.io/sbx/t3code:latest)
 while [[ $# -gt 0 ]]; do
   case $1 in
     --cpus | --memory | --template | --pull | --kit | --kit-arg | --kit-args-file)
