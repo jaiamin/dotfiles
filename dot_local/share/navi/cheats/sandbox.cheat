@@ -25,9 +25,6 @@ sbx skills update
 sbx rm "<sandbox>"
 
 # Set project API key
-sbx secret set-custom --sandbox "<sandbox>" --host "<api_host>" --env "<key_name>"
-
-# Set project API key
 sandbox="<sandbox>"; key_name="<key_name>"; api_host="<api_host>"; \
 placeholder="sbx-cs-$(openssl rand -hex 12)"; \
 sbx secret set-custom --sandbox "$sandbox" --host "$api_host" --env "$key_name" --placeholder "$placeholder" && \
