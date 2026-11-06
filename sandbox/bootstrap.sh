@@ -10,7 +10,45 @@ source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 state_dir="$HOME/.local/state/dotfiles"
 mkdir -p "$state_dir" "$HOME/.local/bin"
 
+# Keep a working image-provided runtime; otherwise install a guest-local LTS.
+ensure_node() (
+  node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)
+  if [[ $node_major =~ ^[0-9]+$ ]] && ((node_major >= 22)) \
+    && npm --version >/dev/null 2>&1 && npx --version >/dev/null 2>&1; then
+    return
+  fi
+  version=24.22.2
+  case $(uname -m) in
+    aarch64 | arm64) arch=arm64 ;;
+    x86_64) arch=x64 ;;
+    *) echo 'Unsupported Node.js architecture.' >&2; exit 1 ;;
+  esac
+  archive="node-v$version-linux-$arch.tar.gz"
+  base="https://nodejs.org/dist/v$version"
+  node_tmp=$(mktemp -d)
+  trap 'rm -rf -- "$node_tmp"' EXIT
+  printf 'Installing guest Node.js %s and npm.\n' "$version"
+  curl -fsSL "$base/SHASUMS256.txt" -o "$node_tmp/checksums.txt"
+  curl -fsSL "$base/$archive" -o "$node_tmp/$archive"
+  (
+    cd "$node_tmp"
+    awk -v file="$archive" '$2 == file { print; found=1 } END { if (!found) exit 1 }' \
+      checksums.txt >selected-checksum
+    sha256sum -c selected-checksum
+  )
+  mkdir -p "$HOME/.local/share/dotfiles" "$HOME/.local/bin"
+  tar -xzf "$node_tmp/$archive" -C "$HOME/.local/share/dotfiles"
+  node_dir="$HOME/.local/share/dotfiles/node-v$version-linux-$arch"
+  for tool in node npm npx; do
+    ln -sfn "$node_dir/bin/$tool" "$HOME/.local/bin/$tool"
+  done
+  node --version
+  npm --version
+  npx --version
+)
+
 if [[ ${1:-} == --browser ]]; then
+  ensure_node
   command -v agent-browser >/dev/null || npm install --global --prefix "$HOME/.local" agent-browser
   # Playwright supplies Linux ARM64 builds. Do not rely on auto-discovery.
   npx --yes playwright@1.61.1 install --with-deps chromium
@@ -52,11 +90,11 @@ command -v apt-get >/dev/null || {
 if [[ ! -f $state_dir/tools-v1 ]]; then
   sudo apt-get update
   sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential python3 libatomic1 util-linux ca-certificates curl git git-lfs gh jq ripgrep unzip shellcheck
-  if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
-    echo 'Expected Node/npm in the Docker agent template.' >&2
-    exit 1
-  fi
+    build-essential python3 libatomic1 util-linux ca-certificates curl git git-lfs gh jq ripgrep unzip shellcheck tar gzip
+fi
+# Run on refresh too, even when an older tools marker already exists.
+ensure_node
+if [[ ! -f $state_dir/tools-v1 ]]; then
   command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
   command -v pnpm >/dev/null || npm install --global --prefix "$HOME/.local" pnpm
   if ! command -v gitleaks >/dev/null; then
