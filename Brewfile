@@ -1,15 +1,10 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
-# Static analysis and lint tool, for (ba)sh scripts
-brew "shellcheck"
-# Static checker for GitHub Actions workflow files
-brew "actionlint"
+tap "stablyai/orca", trusted: { casks: ["orca"] }
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
 # Browser automation CLI for AI agents
 brew "agent-browser"
-# Code searching, linting, rewriting
-brew "ast-grep"
 # Manage your dotfiles across multiple diverse machines, securely
 brew "chezmoi"
 # Manage AI coding skills and documentation context
@@ -20,14 +15,10 @@ brew "fd"
 brew "gh"
 # Distributed revision control system
 brew "git"
-# Git extension for versioning large files
-brew "git-lfs"
 # Audit git repos for secrets
 brew "gitleaks"
 # Lightweight and flexible command-line JSON processor
 brew "jq"
-# Handy way to save and run project-specific commands
-brew "just"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Deep clean and optimize your Mac
@@ -44,16 +35,14 @@ brew "ripgrep"
 brew "opencode"
 # Fast, disk space efficient package manager
 brew "pnpm"
-# Fast Git hook manager written in Rust, drop-in alternative to pre-commit
-brew "prek"
 # Extremely fast Python linter, written in Rust
 brew "ruff"
+# Static analysis and lint tool, for (ba)sh scripts
+brew "shellcheck"
 # Cross-shell prompt for astronauts
 brew "starship"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
-# Internet file retriever
-brew "wget"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Fish-like fast/unobtrusive autosuggestions for zsh
