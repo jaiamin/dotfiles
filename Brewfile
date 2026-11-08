@@ -1,6 +1,5 @@
 tap "docker/tap", trusted: true
 tap "jaiamin/aix"
-tap "stablyai/orca", trusted: { casks: ["orca"] }
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
 # Browser automation CLI for AI agents
