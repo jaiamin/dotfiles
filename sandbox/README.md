@@ -20,7 +20,7 @@ bash "$(chezmoi source-path)/skills.sh"
 On fresh installs only: `sbx policy init balanced`.
 For Codex: `sbx secret set openai --oauth`. For Claude: sign in inside the sandbox using
 [Docker's provider guide](https://docs.docker.com/ai/sandboxes/agents/claude-code/).
-Keep authentication Docker-managed; never copy host agent homes or real tokens.
+Keep coding-agent authentication Docker-managed; never copy host agent homes or OAuth tokens.
 
 ## Create and connect
 
@@ -42,6 +42,38 @@ In T3: **Settings → Environments → Add environment → SSH**, host `my-proje
 Docker supplies the SSH user; no identity file is needed. Add a project on that environment
 at **/home/agent/workspace**. In **Settings → Providers**, select that environment,
 enable the installed provider, and verify login. T3 manages its server and SSH tunnel.
+
+## Project API keys
+
+In Navi, use **Set project API key** and **Remove project API key** as usual.
+Only `api.openai.com` + `OPENAI_API_KEY` uses the temporary [OpenAI helper](openai-key.sh).
+It prompts privately inside the VM and saves the real app key in
+`/home/agent/.config/dotfiles/openai-api.sh`, owned by `agent` with mode `0600`.
+The persistent shell sources that file and appends only `api.openai.com` to both
+`NO_PROXY` and `no_proxy`, preserving other exclusions. SDKs that honor these
+variables use transparent egress; Docker still enforces network policy.
+The app key is readable inside the VM, never stored in this repository or Docker's host secret store.
+The helper adopts the earlier manual setup and never edits agent auth/config files.
+
+Create a Codex sandbox, set the project key in Navi, then connect T3. For an existing
+connection, finish active work, quit T3 to stop SSH reconnection, stop/start the sandbox,
+then reopen T3. Already-running processes retain their old environment after set/remove.
+Codex OAuth stays on `chatgpt.com` through the forward proxy; app calls use
+`api.openai.com` through transparent egress. This combination was live-verified in `ass`.
+
+Other keys retain Docker's existing custom-secret flow. **Claude OAuth + an Anthropic
+app key is not covered:** both target `api.anthropic.com`. A global proxy exclusion
+would also bypass Claude's OAuth substitution; do not add one. See
+[Docker issue #793](https://github.com/docker/sbx-releases/issues/793). That case needs
+app-process-only credential/proxy settings and separate live verification.
+
+When Docker fixes overlapping credentials, run the helper's `remove` action in each
+configured sandbox (or use Navi), restart its processes, then delete only
+`sandbox/openai-key.sh` from the source checkout. Navi falls back to Docker's original
+custom-secret flow automatically; set the key there again. Removing the helper file
+alone does not clean existing sandboxes. The helper leaves pre-existing Docker custom
+secrets and independently configured proxy exclusions untouched; manage old custom
+secrets with `sbx secret rm --sandbox NAME --host api.openai.com --env-name OPENAI_API_KEY`.
 
 ## Autonomous work
 
