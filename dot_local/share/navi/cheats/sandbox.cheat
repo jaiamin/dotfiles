@@ -1,7 +1,7 @@
 % sandbox, t3
 
 # Create project sandbox for T3 Code (once per project)
-bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>"
+bash "$(chezmoi source-path)/sandbox/manage.sh" create "<name>" "<repo>" "<agent>" "<browser>" --mobile "<mobile>"
 
 # Start or resume sandbox for T3 Code (keeps running until stopped)
 sbx run --detach --name "<sandbox>"
@@ -14,6 +14,15 @@ sbx inspect "<sandbox>"
 
 # Test SSH connection or open sandbox shell
 ssh "<sandbox>.sbx"
+
+# Enable mobile access at login and print address + fresh pairing code
+sbx-mobile "<sandbox>"
+
+# Check mobile connection
+sbx-mobile status "<sandbox>"
+
+# Disable mobile access and remove its bridge (keeps sandbox and code running)
+sbx-mobile off "<sandbox>"
 
 # Refresh sandbox tools and instructions (does not update agents)
 bash "$(chezmoi source-path)/sandbox/manage.sh" refresh "<sandbox>" "<repo>" "<browser>"
@@ -40,5 +49,7 @@ $ api_host: printf '%s\n' api.openai.com api.anthropic.com
 $ key_name: printf '%s\n' OPENAI_API_KEY ANTHROPIC_API_KEY
 $ agent: printf '%s\n' claude codex opencode
 $ browser: printf '%s\n' false true
+$ mobile: printf '%s\n' false true
 $ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
 $ sandbox: sbx ls -q
+

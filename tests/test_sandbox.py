@@ -79,6 +79,8 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
             ('create','my-project','owner/..','claude'),
             ('create','my-project','owner/repo;whoami','claude'),
             ('create','my-project','owner/repo','claude','yes'),
+            ('create','my-project','owner/repo','claude','false','--mobile','yes'),
+            ('refresh','my-project','owner/repo','false','--mobile','true'),
             ('create','my-project','owner/repo','claude','--','--mount','/Users/jai:/work'),
             ('create','my-project','owner/repo','claude','--','.'),
             ('check','my-project','extra'),
@@ -93,6 +95,34 @@ if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
         self.env['EXISTING']='other\nmy-project'
         self.assertNotEqual(self.run_manager('create','my-project','owner/repo','claude').returncode,0)
         self.assertEqual(self.calls(),[['ls','-q']])
+
+    def test_create_only_configures_mobile_when_opted_in_and_refresh_preserves_it(self):
+        mobile = self.bin / 'sbx-mobile'
+        mobile.write_text('''#!/usr/bin/env python3
+import json, os, sys
+with open(os.environ['MOCK_LOG'],'a') as f:
+    f.write(json.dumps(['sbx-mobile', *sys.argv[1:]])+'\\n')
+''')
+        mobile.chmod(0o755)
+        result = self.run_manager('create','my-project','owner/repo','claude','false')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertFalse(any(call[0] == 'sbx-mobile' for call in self.calls()))
+        result = self.run_manager('create','my-project','owner/repo','claude','false','--mobile','true')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(self.calls()[-1],['sbx-mobile','my-project'])
+        self.log.unlink()
+        result = self.run_manager('refresh','my-project','owner/repo','false')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertFalse(any(call[0] == 'sbx-mobile' for call in self.calls()))
+
+    def test_mobile_failure_preserves_successfully_created_sandbox(self):
+        mobile = self.bin / 'sbx-mobile'
+        mobile.write_text('#!/bin/sh\nexit 17\n')
+        mobile.chmod(0o755)
+        result = self.run_manager('create','my-project','owner/repo','claude','false','--mobile','true')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('sbx-mobile my-project',result.stderr)
+        self.assertFalse(any(call[0] in ('stop','rm','reset') for call in self.calls()))
 
     def test_failed_create_never_copies_or_deletes(self):
         self.env['FAIL_CREATE']='1'
@@ -137,7 +167,9 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         self.assertFalse(any(x[0] in ('create','run','ports','rm') for x in calls))
 
     def test_guest_script_refuses_native_execution(self):
-        result = subprocess.run(['bash',str(BOOTSTRAP)],env=self.env,capture_output=True,text=True)
+        # The test runner itself may have the Docker guest's HOME and UID.
+        env = dict(self.env, HOME=str(self.root / 'native-home'))
+        result = subprocess.run(['bash',str(BOOTSTRAP)],env=env,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('inside a Docker Sandbox',result.stderr)
 
@@ -492,8 +524,12 @@ class ChezmoiTests(unittest.TestCase):
             self.assertFalse((home/'sandbox').exists())
             self.assertFalse((home/'tests').exists())
             self.assertTrue((home/'.local/share/navi/cheats/sandbox.cheat').is_file())
+            self.assertTrue((home/'.local/bin/sbx-mobile').is_file())
+            self.assertTrue(os.access(home/'.local/bin/sbx-mobile', os.X_OK))
+            self.assertFalse((home/'Library/LaunchAgents').exists())
             self.assertTrue((home/'.gitconfig').is_file())
 
 
 if __name__ == '__main__':
     unittest.main()
+

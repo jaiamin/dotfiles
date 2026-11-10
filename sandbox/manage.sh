@@ -5,7 +5,7 @@ die() {
   printf '%s\n' "$*" >&2
   exit 1
 }
-usage='Usage: manage.sh create NAME OWNER/REPO AGENT [false|true] [-- SBX_OPTIONS...]
+usage='Usage: manage.sh create NAME OWNER/REPO AGENT [false|true] [--mobile false|true] [-- SBX_OPTIONS...]
        manage.sh refresh NAME OWNER/REPO [false|true]
        manage.sh check NAME'
 [[ $# -ge 2 ]] || die "$usage"
@@ -62,11 +62,18 @@ if [[ $action == create ]]; then
   shift
 fi
 browser=false
-if [[ $# -gt 0 && $1 != -- ]]; then
+if [[ $# -gt 0 && $1 != -- && $1 != --mobile ]]; then
   browser=$1
   shift
 fi
 case $browser in false | true) ;; *) die 'Browser must be false or true.' ;; esac
+mobile=false
+if [[ ${1:-} == --mobile ]]; then
+  [[ $action == create && $# -ge 2 ]] || die "$usage"
+  mobile=$2
+  shift 2
+  case $mobile in false | true) ;; *) die 'Mobile must be false or true.' ;; esac
+fi
 if [[ $# -gt 0 ]]; then
   [[ $1 == -- ]] || die "$usage"
   shift
@@ -123,3 +130,16 @@ printf '\nSSH: %s.sbx (user _default_user_, no identity file)\n' "$name"
 printf 'Remote repository: /home/agent/workspace\n'
 printf 'T3 Code: add SSH environment %s.sbx, then add /home/agent/workspace.\n' "$name"
 printf 'Check connection: bash sandbox/manage.sh check %s\n' "$name"
+
+# Mobile bridges are host-managed and optional; provisioning must remain usable
+# without a signed-in Tailscale client. Never restart an existing sandbox here.
+if [[ $action == create && $mobile == true ]]; then
+  if command -v sbx-mobile >/dev/null; then
+    if ! sbx-mobile "$name"; then
+      printf 'Mobile setup incomplete. Connect Tailscale, then run: sbx-mobile %s\n' "$name" >&2
+    fi
+  else
+    printf 'Mobile access: apply dotfiles, connect Tailscale, then run sbx-mobile %s.\n' "$name"
+  fi
+fi
+

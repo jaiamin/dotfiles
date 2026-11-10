@@ -61,6 +61,7 @@ jobs:
       - name: Check shell and Brewfile syntax
         run: |
           mapfile -d '' scripts < <(git ls-files -z -- '*.sh')
+          scripts+=(dot_local/bin/executable_sbx-mobile)
           for script in "${scripts[@]}"; do
             bash -n "$script"
           done
@@ -131,3 +132,4 @@ jobs:
         run: |
           zsh -n dot_zprofile
           zsh -n dot_zshrc
+

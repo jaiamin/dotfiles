@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# Mac-only T3 bridge. launchd owns SSH; Tailscale owns the private HTTPS listener.
+set -euo pipefail
+umask 077
+die() { printf '%s\n' "$*" >&2; exit 1; }
+usage='Usage: sbx-mobile NAME | sbx-mobile status NAME | sbx-mobile off NAME'
+if [[ ${1:-} == --help ]]; then printf '%s\n' "$usage"; exit; fi
+action=up
+if [[ $# -eq 2 ]]; then
+  case $1 in status | off | _run) action=$1; shift ;; *) die "$usage" ;; esac
+fi
+[[ $# -eq 1 ]] || die "$usage"
+name=$1
+[[ $name =~ ^[a-z][a-z0-9-]{1,47}$ && $name != default ]] || die 'Invalid sandbox name.'
+[[ $(uname -s) == Darwin ]] || die 'Run sbx-mobile on your Mac, not inside a sandbox.'
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+for tool in jq ssh curl launchctl plutil lsof; do
+  command -v "$tool" >/dev/null || die "Missing $tool. Install the dotfiles Brewfile first."
+done
+state="$HOME/.local/state/sbx-mobile"
+config="$state/$name.json"
+label="com.jaiamin.sbx-mobile.$name"
+domain="gui/$(id -u)"
+plist="$HOME/Library/LaunchAgents/$label.plist"
+
+# This session does not stop/start a sandbox or replace a healthy T3 server.
+# Retry SSH via launchd, and keep the guest server alive independently of T3 desktop.
+if [[ $action == _run ]]; then
+  local_port=$(jq -er '.local_port' "$config")
+  guest_port=$(jq -er '.guest_port' "$config")
+  exec ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    -L "127.0.0.1:$local_port:127.0.0.1:$guest_port" "$name.sbx" \
+    "bash -s -- $guest_port" <<'REMOTE'
+set -eu
+export PATH="$HOME/.local/bin:$PATH"
+port=$1
+base=/home/agent/.t3
+command -v t3 >/dev/null || { echo 'T3 is missing; refresh this sandbox.' >&2; exit 1; }
+mkdir -p "$HOME/.local/state/sbx-mobile"
+while :; do
+  if ! curl --noproxy '*' -fsS --max-time 3 "http://127.0.0.1:$port/.well-known/t3/environment" >/dev/null 2>&1; then
+    # A lock prevents duplicate launches; an existing owner is never killed.
+    flock -n "$HOME/.local/state/sbx-mobile/server.lock" \
+      sh -c 'exec nohup t3 serve --no-lan --port "$1" --base-dir "$2"' _ "$port" "$base" \
+      </dev/null >/dev/null 2>&1 &
+  fi
+  sleep 20
+done
+REMOTE
+fi
+
+tailscale=$(command -v tailscale || true)
+[[ -n $tailscale ]] || tailscale=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+[[ -x $tailscale ]] || die 'Install and connect Tailscale on your Mac first.'
+
+read_config() {
+  local_port=$(jq -er '.local_port | select(type == "number" and . >= 1024 and . <= 65535)' "$config")
+  https_port=$(jq -er '.https_port | select(type == "number" and . >= 1024 and . <= 65535)' "$config")
+  guest_port=$(jq -er '.guest_port | select(. == 3773)' "$config")
+}
+serve_config() { "$tailscale" serve status --json; }
+owns_endpoint() {
+  jq -e --arg port ":$https_port" --arg target "http://127.0.0.1:$local_port" \
+    '[.Web // {} | to_entries[] | select(.key | endswith($port)) | .value.Handlers // {} | .["/"].Proxy] == [$target]' >/dev/null
+}
+endpoint_exists() { jq -e --arg port "$https_port" '(.TCP // {}) | has($port)' >/dev/null; }
+
+[[ $action == up || -f $config ]] || die "No managed mobile connection for $name."
+if [[ $action == off ]]; then
+  mkdir "$state/.lock" 2>/dev/null || die 'Another setup is running; retry shortly.'
+  trap 'rmdir "$state/.lock" 2>/dev/null || true; rmdir "$state" 2>/dev/null || true' EXIT
+  read_config
+  current=$(serve_config) || die 'Cannot inspect Tailscale Serve; nothing removed.'
+  if endpoint_exists <<<"$current"; then
+    owns_endpoint <<<"$current" || die 'That HTTPS port belongs to another service; nothing removed.'
+    "$tailscale" serve --bg --yes --https="$https_port" off
+  fi
+  if launchctl print "$domain/$label" >/dev/null 2>&1; then
+    launchctl bootout "$domain/$label"
+  fi
+  rm -f -- "$config" "$plist"
+  rmdir "$state" 2>/dev/null || true
+  printf 'Mobile bridge removed for %s. Sandbox and T3 server left running.\n' "$name"
+  exit
+fi
+
+status=$("$tailscale" status --json) || die 'Cannot read Tailscale status.'
+[[ $(jq -r '.BackendState' <<<"$status") == Running ]] || die 'Connect Tailscale on your Mac first.'
+dns=$(jq -er '.Self.DNSName | select(type == "string" and length > 0)' <<<"$status")
+dns=${dns%.}
+if [[ $action == status ]]; then
+  read_config
+  printf 'Address: https://%s:%s\n' "$dns" "$https_port"
+  launchctl print "$domain/$label" >/dev/null 2>&1 || die 'Login service is not loaded; rerun sbx-mobile NAME.'
+  current=$(serve_config)
+  owns_endpoint <<<"$current" || die 'Tailscale mapping is missing or changed; rerun sbx-mobile NAME.'
+  curl --noproxy '*' -fsS --max-time 5 "https://$dns:$https_port/.well-known/t3/environment" |
+    jq -er '"Connected: " + .label + " (" + .environmentId + ")"'
+  exit
+fi
+
+mkdir -p "$state" "$HOME/Library/LaunchAgents"
+chmod 700 "$state"
+mkdir "$state/.lock" 2>/dev/null || die 'Another setup is running. Retry shortly (stale lock: ~/.local/state/sbx-mobile/.lock).'
+fresh=false
+complete=false
+created_service=false
+created_endpoint=false
+cleanup() {
+  if [[ $fresh == true && $complete != true ]]; then
+    if [[ $created_endpoint == true ]]; then
+      "$tailscale" serve --bg --yes --https="$https_port" off >/dev/null 2>&1 || true
+    fi
+    if [[ $created_service == true ]]; then
+      launchctl bootout "$domain/$label" >/dev/null 2>&1 || true
+    fi
+    rm -f -- "$config" "$plist"
+  fi
+  rmdir "$state/.lock" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+current=$(serve_config) || die 'Cannot inspect existing Tailscale Serve mappings.'
+if [[ -f $config ]]; then
+  read_config
+  if endpoint_exists <<<"$current"; then
+    owns_endpoint <<<"$current" || die 'That HTTPS port belongs to another service; refusing to overwrite it.'
+  fi
+else
+  fresh=true
+  # Reserve unique ports without overwriting existing/manual Tailscale services.
+  chosen=false
+  for ((slot = 0; slot < 1000; slot++)); do
+    local_port=$((44774 + slot))
+    https_port=$((8444 + slot))
+    endpoint_exists <<<"$current" && continue
+    lsof -nP -iTCP:"$local_port" -sTCP:LISTEN >/dev/null 2>&1 && continue
+    reserved=false
+    for file in "$state"/*.json; do
+      [[ -f $file ]] || continue
+      if jq -e --argjson lp "$local_port" --argjson hp "$https_port" \
+        '.local_port == $lp or .https_port == $hp' "$file" >/dev/null; then reserved=true; break; fi
+    done
+    [[ $reserved == false ]] || continue
+    chosen=true
+    break
+  done
+  [[ $chosen == true ]] || die 'No free mobile connection ports.'
+  jq -n --argjson lp "$local_port" --argjson hp "$https_port" \
+    '{local_port: $lp, https_port: $hp, guest_port: 3773}' >"$config"
+fi
+
+if ! launchctl print "$domain/$label" >/dev/null 2>&1; then
+  if lsof -nP -iTCP:"$local_port" -sTCP:LISTEN >/dev/null 2>&1; then
+    die "Local port $local_port is occupied; refusing to attach to another service."
+  fi
+  # JSON-to-plist avoids shell/XML quoting bugs, including spaces in the home path.
+  script=$(cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
+  jq -n --arg label "$label" --arg script "$script" --arg name "$name" --arg home "$HOME" \
+    '{Label: $label, ProgramArguments: ["/bin/bash", $script, "_run", $name],
+      EnvironmentVariables: {HOME: $home}, RunAtLoad: true, KeepAlive: true,
+      ThrottleInterval: 30, StandardOutPath: "/dev/null", StandardErrorPath: "/dev/null"}' |
+    plutil -convert xml1 -o "$plist" -- -
+  launchctl bootstrap "$domain" "$plist"
+  created_service=true
+fi
+ready=false
+environment_id=
+for ((attempt = 0; attempt < 30; attempt++)); do
+  if environment_id=$(curl --noproxy '*' -fsS --max-time 2 "http://127.0.0.1:$local_port/.well-known/t3/environment" 2>/dev/null |
+    jq -er '.environmentId | select(type == "string" and length > 0)' 2>/dev/null); then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+[[ $ready == true ]] || die "Cannot reach $name T3 server. Confirm the sandbox is running and SSH works; no sandbox was restarted."
+if ! owns_endpoint <<<"$current"; then
+  "$tailscale" serve --bg --yes --https="$https_port" "http://127.0.0.1:$local_port"
+  created_endpoint=true
+fi
+complete=true
+printf '\nAddress: https://%s:%s\n' "$dns" "$https_port"
+if ! curl --noproxy '*' -fsS --max-time 10 "https://$dns:$https_port/.well-known/t3/environment" |
+  jq -e --arg id "$environment_id" '.environmentId == $id' >/dev/null; then
+  die "Bridge installed, but HTTPS is not ready. Check Tailscale and run: sbx-mobile status $name"
+fi
+# Tokens go only to the invoking terminal, never files or launchd logs.
+pairing=$(ssh -T -o BatchMode=yes -o ConnectTimeout=10 "$name.sbx" \
+  'export PATH="$HOME/.local/bin:$PATH"; t3 pair --base-dir /home/agent/.t3') || die 'Bridge installed. Pairing failed; rerun sbx-mobile NAME to retry.'
+code=$(printf '%s\n' "$pairing" | sed -nE 's/^(Token|Code|Pairing code):[[:space:]]*([^[:space:]]+).*/\2/p' | head -n 1)
+if [[ -z $code ]]; then
+  code=$(printf '%s\n' "$pairing" | sed -nE 's/.*#token=([^[:space:]]+).*/\1/p' | head -n 1)
+fi
+[[ -n $code ]] || die 'Bridge installed, but pairing output was not recognized. Run t3 pair in the sandbox.'
+printf 'Code: %s\nAdd these in the phone app with Tailscale connected.\n' "$code"
+printf 'Reconnects at Mac login and after SSH drops. Re-pair only when needed.\n'
