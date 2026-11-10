@@ -1,5 +1,4 @@
 tap "docker/tap", trusted: true
-tap "jaiamin/aix"
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
 # Browser automation CLI for AI agents
@@ -48,8 +47,6 @@ brew "zoxide"
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
-# Turn plain English into shell commands with Apple Intelligence
-brew "jaiamin/aix/aix", trusted: true
 # Agent orchestration platform
 cask "antigravity"
 # 3D creation suite
@@ -68,10 +65,14 @@ cask "codexbar"
 cask "crossover"
 # Voice and text chat software
 cask "discord"
+# Assign keys, and then decorate and label them
+cask "elgato-stream-deck"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
 # Web browser
 cask "google-chrome"
+# Keyboard shortcuts for every button on your screen
+cask "homerow"
 # GameStream client
 cask "moonlight"
 # Move and resize windows using keyboard shortcuts or snap areas
