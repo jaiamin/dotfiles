@@ -66,9 +66,7 @@ Cloudflare tunnel DNS failure observed inside Docker Sandboxes.
 5. In the phone app, add the **printed Tailscale HTTPS address, including its port**,
    and the **pairing code** (token after `#token=`). Ignore the local pairing URL/QR.
 
-Pair once per sandbox, not per chat. Give each sandbox unique Mac/HTTPS ports:
-existing `ass` uses `44773/443`; next use `44774/8444`, then `44775/8445`.
-Guest port `3773` is assumed; check `ss -ltnp` if needed.
+Pair once per sandbox, not per chat. Give each sandbox unique Mac/HTTPS ports. Check `ss -ltnp` if needed.
 Keep both Tailscale clients connected, the Mac awake, and the sandbox running.
 Serve persists across reboots; SSH forwards do not. After reboot, reconnect T3 desktop
 and rerun each forward. No guest DNS edits or T3 restart are needed for this setup.
