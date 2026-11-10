@@ -49,7 +49,7 @@ mkdir -p "$HOME/.local/state/sbx-mobile"
 while :; do
   if ! curl --noproxy '*' -fsS --max-time 3 "http://127.0.0.1:$port/.well-known/t3/environment" >/dev/null 2>&1; then
     # A lock prevents duplicate launches; an existing owner is never killed.
-    flock -n "$HOME/.local/state/sbx-mobile/server.lock" \
+    setsid -f flock -n "$HOME/.local/state/sbx-mobile/server.lock" \
       sh -c 'exec nohup t3 serve --no-lan --port "$1" --base-dir "$2"' _ "$port" "$base" \
       </dev/null >/dev/null 2>&1 &
   fi

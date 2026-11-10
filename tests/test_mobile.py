@@ -34,6 +34,8 @@ elif tool == 'lsof':
 elif tool == 'plutil':
     content = json.load(sys.stdin)
     pathlib.Path(args[args.index('-o')+1]).write_bytes(plistlib.dumps(content))
+elif tool == 'setsid':
+    os.execvpe(args[1], args[1:], os.environ)  # Simulate the Linux utility on Mac runners.
 elif tool == 'flock':
     # The fake SSH guest runs on the test host, including macOS without util-linux.
     import fcntl
@@ -95,6 +97,7 @@ elif tool == 'sleep':
         sys.exit(42)  # End the watchdog after one pass; no live services escape the test.
 elif tool == 't3':
     (root/'guest-started').write_text(json.dumps(args))
+    (root/'guest-session').write_text(str(os.getsid(0)))
 else: raise RuntimeError(tool)
 '''
 
@@ -111,7 +114,7 @@ class MobileTests(unittest.TestCase):
                         PATH=f'{self.bin}:{os.environ["PATH"]}')
         self.db = {'jobs': {}, 'serve': {'TCP': {}, 'Web': {}}}
         self.save()
-        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3', 'sbx', 'flock'):
+        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3', 'sbx', 'flock', 'setsid'):
             path = self.bin/name
             path.write_text(f'#!{sys.executable}\n'+FAKE)
             path.chmod(0o755)
@@ -290,6 +293,19 @@ class MobileTests(unittest.TestCase):
                 self.assertIn('ExitOnForwardFailure=yes', call)
                 self.assertIn('ServerAliveCountMax=3', call)
                 self.assertNotIn('sbx ', (self.root/'remote.sh').read_text())
+
+    @unittest.skipUnless(Path('/usr/bin/setsid').exists(), 'native session detachment is Linux-only')
+    def test_started_guest_server_is_detached_from_the_ssh_session(self):
+        self.setup_bridge()
+        (self.bin/'setsid').unlink()
+        (self.bin/'setsid').symlink_to('/usr/bin/setsid')
+        self.env['EXEC_REMOTE'] = '1'
+        self.db = self.read()
+        self.db['remote_healthy'] = False
+        self.save()
+        result = self.run_helper('_run','project')
+        self.assertEqual(result.returncode, 42, result.stderr)
+        self.assertNotEqual(int((self.root/'guest-session').read_text()), os.getsid(0))
 
 
 if __name__ == '__main__': unittest.main()
