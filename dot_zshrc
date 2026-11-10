@@ -18,9 +18,6 @@ autoload -Uz compinit && compinit
 # Prompt
 command -v starship >/dev/null && eval "$(starship init zsh)"
 
-# aix
-command -v aix >/dev/null && eval "$(aix init zsh)"
-
 # navi
 command -v navi >/dev/null && eval "$(navi widget zsh)"
 
