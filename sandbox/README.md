@@ -43,6 +43,39 @@ Docker supplies the SSH user; no identity file is needed. Add a project on that 
 at **/home/agent/workspace**. In **Settings → Providers**, select that environment,
 enable the installed provider, and verify login. T3 manages its server and SSH tunnel.
 
+## Mobile access with Tailscale
+
+Keep Tailscale on the Mac and phone, signed into the same account.
+Route: phone → Mac Tailscale HTTPS → SSH → sandbox T3. This avoids the
+Cloudflare tunnel DNS failure observed inside Docker Sandboxes.
+
+1. Connect the sandbox in T3 desktop over SSH so its server is running.
+2. On the **Mac**, keep this forward running in its own terminal:
+   ```sh
+   ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -L 127.0.0.1:44774:127.0.0.1:3773 my-project.sbx
+   ```
+3. In another Mac terminal, configure its private HTTPS endpoint once:
+   ```sh
+   tailscale serve --bg --https=8444 http://127.0.0.1:44774
+   ```
+4. Test `<printed-HTTPS-address>/.well-known/t3/environment` in phone Safari.
+   Inside the **sandbox**, generate a fresh pairing code:
+   ```sh
+   npx t3 pair --base-dir /home/agent/.t3
+   ```
+5. In the phone app, add the **printed Tailscale HTTPS address, including its port**,
+   and the **pairing code** (token after `#token=`). Ignore the local pairing URL/QR.
+
+Pair once per sandbox, not per chat. Give each sandbox unique Mac/HTTPS ports:
+existing `ass` uses `44773/443`; next use `44774/8444`, then `44775/8445`.
+Guest port `3773` is assumed; check `ss -ltnp` if needed.
+Keep both Tailscale clients connected, the Mac awake, and the sandbox running.
+Serve persists across reboots; SSH forwards do not. After reboot, reconnect T3 desktop
+and rerun each forward. No guest DNS edits or T3 restart are needed for this setup.
+
+[T3 pairing](https://github.com/pingdotgg/t3code/blob/main/docs/user/remote-access.md) ·
+[Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve)
+
 ## Autonomous work
 
 - Choose the remote project, **New worktree**, and **Full access** for each task.
