@@ -34,6 +34,13 @@ elif tool == 'lsof':
 elif tool == 'plutil':
     content = json.load(sys.stdin)
     pathlib.Path(args[args.index('-o')+1]).write_bytes(plistlib.dumps(content))
+elif tool == 'flock':
+    # The fake SSH guest runs on the test host, including macOS without util-linux.
+    import fcntl
+    with open(args[1], 'a') as lock:
+        try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError: sys.exit(1)
+        sys.exit(subprocess.run(args[2:]).returncode)
 elif tool == 'launchctl':
     verb = args[0]
     if verb == 'print': sys.exit(0 if args[1].split('/')[-1] in db['jobs'] else 1)
@@ -104,7 +111,7 @@ class MobileTests(unittest.TestCase):
                         PATH=f'{self.bin}:{os.environ["PATH"]}')
         self.db = {'jobs': {}, 'serve': {'TCP': {}, 'Web': {}}}
         self.save()
-        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3', 'sbx'):
+        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3', 'sbx', 'flock'):
             path = self.bin/name
             path.write_text(f'#!{sys.executable}\n'+FAKE)
             path.chmod(0o755)
