@@ -23,6 +23,11 @@ with (root/'calls.jsonl').open('a') as f:
     f.write(json.dumps([tool, *args])+'\n')
 def save(): dbpath.write_text(json.dumps(db))
 if tool == 'uname': print('Darwin')
+elif tool == 'sbx':
+    if db.get('bad_sandbox_state'): print('{}')
+    else:
+        print(json.dumps([{'name':name, 'status':db.get('sandbox_status','running')}
+                          for name in ('project','another')]))
 elif tool == 'lsof':
     port = next((a.split(':')[-1] for a in args if a.startswith('-iTCP:')), '')
     sys.exit(0 if port in db.get('occupied', []) else 1)
@@ -99,7 +104,7 @@ class MobileTests(unittest.TestCase):
                         PATH=f'{self.bin}:{os.environ["PATH"]}')
         self.db = {'jobs': {}, 'serve': {'TCP': {}, 'Web': {}}}
         self.save()
-        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3'):
+        for name in ('uname', 'lsof', 'plutil', 'launchctl', 'tailscale', 'curl', 'ssh', 'sleep', 't3', 'sbx'):
             path = self.bin/name
             path.write_text(f'#!{sys.executable}\n'+FAKE)
             path.chmod(0o755)
@@ -205,6 +210,23 @@ class MobileTests(unittest.TestCase):
             self.assertNotEqual(self.run_helper(*args).returncode, 0)
             self.assertEqual(self.read(), before)
 
+    def test_stopped_or_unknown_sandbox_never_triggers_ssh_or_new_service(self):
+        for state in ('stopped', 'starting', 'unknown'):
+            self.db['sandbox_status'] = state
+            self.save()
+            self.assertNotEqual(self.run_helper('project').returncode, 0)
+            self.assertFalse(self.config().exists())
+            self.assertFalse(any(c[0] == 'ssh' for c in self.calls()))
+        self.db['sandbox_status'] = 'running'
+        self.save()
+        self.setup_bridge()
+        self.db = self.read()
+        self.db['sandbox_status'] = 'stopped'
+        self.save()
+        before = sum(c[0] == 'ssh' for c in self.calls())
+        self.assertNotEqual(self.run_helper('_run','project').returncode, 0)
+        self.assertEqual(sum(c[0] == 'ssh' for c in self.calls()), before)
+
     def test_off_removes_only_own_resources_and_never_stops_guest(self):
         self.setup_bridge()
         self.setup_bridge('another')
@@ -214,7 +236,8 @@ class MobileTests(unittest.TestCase):
         self.assertTrue(self.config('another').exists())
         self.assertEqual(set(self.read()['serve']['TCP']), {'8445'})
         self.assertTrue(self.read()['jobs'])
-        self.assertFalse(any(c[0] in ('sbx', 'kill', 'pkill') for c in self.calls()))
+        self.assertFalse(any(c[0] in ('kill', 'pkill') for c in self.calls()))
+        self.assertTrue(all(c[1:] == ['ls','--format','json'] for c in self.calls() if c[0] == 'sbx'))
 
     def test_refuses_to_overwrite_or_remove_endpoint_reassigned_to_someone_else(self):
         self.setup_bridge()

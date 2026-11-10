@@ -14,7 +14,7 @@ name=$1
 [[ $name =~ ^[a-z][a-z0-9-]{1,47}$ && $name != default ]] || die 'Invalid sandbox name.'
 [[ $(uname -s) == Darwin ]] || die 'Run sbx-mobile on your Mac, not inside a sandbox.'
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-for tool in jq ssh curl launchctl plutil lsof; do
+for tool in jq ssh curl launchctl plutil lsof sbx; do
   command -v "$tool" >/dev/null || die "Missing $tool. Install the dotfiles Brewfile first."
 done
 state="$HOME/.local/state/sbx-mobile"
@@ -23,9 +23,17 @@ label="com.jaiamin.sbx-mobile.$name"
 domain="gui/$(id -u)"
 plist="$HOME/Library/LaunchAgents/$label.plist"
 
+sandbox_running() {
+  # SSH's Docker ProxyCommand otherwise starts a stopped sandbox automatically.
+  sbx ls --format json | jq -e --arg name "$name" '
+    any(.[]; .name == $name and
+      ((.status // .state // "") | strings | ascii_downcase | test("^running($|[ (])")))' >/dev/null
+}
+
 # This session does not stop/start a sandbox or replace a healthy T3 server.
 # Retry SSH via launchd, and keep the guest server alive independently of T3 desktop.
 if [[ $action == _run ]]; then
+  sandbox_running || exit 1
   local_port=$(jq -er '.local_port' "$config")
   guest_port=$(jq -er '.guest_port' "$config")
   exec ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o ExitOnForwardFailure=yes \
@@ -100,6 +108,7 @@ if [[ $action == status ]]; then
   exit
 fi
 
+sandbox_running || die "Sandbox $name is not running (or its state is unavailable). Start it when ready, then rerun sbx-mobile $name."
 mkdir -p "$state" "$HOME/Library/LaunchAgents"
 chmod 700 "$state"
 mkdir "$state/.lock" 2>/dev/null || die 'Another setup is running. Retry shortly (stale lock: ~/.local/state/sbx-mobile/.lock).'
