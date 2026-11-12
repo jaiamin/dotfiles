@@ -1,4 +1,5 @@
 tap "docker/tap", trusted: true
+tap "jaiamin/meter", "https://github.com/jaiamin/Meter.git"
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
 # Browser automation CLI for AI agents
@@ -63,6 +64,8 @@ cask "codex"
 cask "codexbar"
 # Tool to run Windows software
 cask "crossover"
+# Command-line agent for Cursor
+cask "cursor-cli"
 # Voice and text chat software
 cask "discord"
 # Assign keys, and then decorate and label them
@@ -71,8 +74,12 @@ cask "elgato-stream-deck"
 cask "ghostty"
 # Web browser
 cask "google-chrome"
+# AI teammates that work across your apps and tools
+cask "grok-bot"
 # Keyboard shortcuts for every button on your screen
 cask "homerow"
+# Minimal Stream Deck usage widgets powered by CodexBar
+cask "jaiamin/meter/meter"
 # GameStream client
 cask "moonlight"
 # Move and resize windows using keyboard shortcuts or snap areas
