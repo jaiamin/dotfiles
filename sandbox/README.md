@@ -45,34 +45,25 @@ enable the installed provider, and verify login. T3 manages its server and SSH t
 
 ## Mobile access with Tailscale
 
-Keep Tailscale on the Mac and phone, signed into the same account.
-Route: phone → Mac Tailscale HTTPS → SSH → sandbox T3. This avoids the
-Cloudflare tunnel DNS failure observed inside Docker Sandboxes.
+Connect Tailscale on Mac and phone to the same account; deploy with `chezmoi apply`.
+Mobile access is **off by default**. Choose `mobile=true` in Navi's create command
+(CLI: append `--mobile true`) to set it up during creation. For an existing sandbox,
+or a fresh pairing code, run on the **Mac**:
 
-1. Connect the sandbox in T3 desktop over SSH so its server is running.
-2. On the **Mac**, keep this forward running in its own terminal:
-   ```sh
-   ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -L 127.0.0.1:44774:127.0.0.1:3773 my-project.sbx
-   ```
-3. In another Mac terminal, configure its private HTTPS endpoint once:
-   ```sh
-   tailscale serve --bg --https=8444 http://127.0.0.1:44774
-   ```
-4. Test `<printed-HTTPS-address>/.well-known/t3/environment` in phone Safari.
-   Inside the **sandbox**, generate a fresh pairing code:
-   ```sh
-   npx t3 pair --base-dir /home/agent/.t3
-   ```
-5. In the phone app, add the **printed Tailscale HTTPS address, including its port**,
-   and the **pairing code** (token after `#token=`). Ignore the local pairing URL/QR.
+```sh
+sbx-mobile my-project
+```
 
-Pair once per sandbox, not per chat. Give each sandbox unique Mac/HTTPS ports. Check `ss -ltnp` if needed.
-Keep both Tailscale clients connected, the Mac awake, and the sandbox running.
-Serve persists across reboots; SSH forwards do not. After reboot, reconnect T3 desktop
-and rerun each forward. No guest DNS edits or T3 restart are needed for this setup.
+Add the printed **Address** and **Code** in T3 mobile or web. No manual ports or open
+terminal needed. Each sandbox gets a private HTTPS endpoint and a Mac login service
+that reconnects SSH and starts T3 only when absent. Tailscale stays outside the guest.
+Keep the Mac awake, Tailscale connected, and the sandbox running; stopped sandboxes
+are never resumed automatically. Pairing may need renewing when its session expires.
 
-[T3 pairing](https://github.com/pingdotgg/t3code/blob/main/docs/user/remote-access.md) ·
-[Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve)
+`sbx-mobile status my-project` checks HTTPS; `sbx-mobile off my-project` removes only
+that bridge and its configuration, leaving the sandbox, T3 server, and code running.
+State: `~/.local/state/sbx-mobile`; services: `~/Library/LaunchAgents/com.jaiamin.sbx-mobile.*.plist`.
+Existing manual tunnels are not changed. The helper assumes guest T3 port `3773`.
 
 ## Autonomous work
 
@@ -107,3 +98,4 @@ guest packages, hooks, and published ports separately. Never delete whole agent 
 [Docker connection](https://docs.docker.com/ai/sandboxes/integrations/t3-code/) ·
 [T3 permissions](https://github.com/pingdotgg/t3code/blob/main/docs/user/permission-modes.md) ·
 [T3 updates](https://github.com/pingdotgg/t3code/blob/main/docs/user/updating.md)
+
