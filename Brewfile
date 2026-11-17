@@ -86,8 +86,6 @@ cask "moonlight"
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
 cask "docker/tap/sbx", trusted: true
-# Music streaming service
-cask "spotify"
 # Minimal GUI for AI code agents
 cask "t3-code"
 # Mesh VPN based on WireGuard
