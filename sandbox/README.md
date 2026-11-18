@@ -17,10 +17,8 @@ sbx secret set github --command 'env -u GH_TOKEN -u GITHUB_TOKEN gh auth token -
 bash "$(chezmoi source-path)/skills.sh"
 ```
 
-On fresh installs only: `sbx policy init balanced`.
-For Codex: `sbx secret set openai --oauth`. For Claude: sign in inside the sandbox using
-[Docker's provider guide](https://docs.docker.com/ai/sandboxes/agents/claude-code/).
-Keep authentication Docker-managed; never copy host agent homes or real tokens.
+On fresh installs, use `sbx policy init balanced`. Use `sbx secret set openai --oauth`
+on the Mac if you use Docker's Codex kit with a ChatGPT subscription.
 
 ## Create and connect
 
@@ -30,18 +28,30 @@ From the dotfiles source directory, or use Navi:
 bash sandbox/manage.sh create my-project owner/repo claude true
 bash sandbox/manage.sh check my-project
 # Existing managed sandbox, preserving its checkout and history:
-bash sandbox/manage.sh refresh my-project owner/repo true
+bash sandbox/manage.sh refresh my-project
 ```
 
-The repo needs an initial commit. Defaults: 4 CPUs, 4 GiB, read-only shared skills,
-and the v3 `docker.io/sbx/t3code:latest` kit with telemetry off. `true` adds agent-browser/Chromium.
-Additional kits must also be v3; legacy v1/v2 kits cannot be mixed with built-in agents.
-Use `codex` or `opencode` instead of `claude`; append `-- --memory 8g` to change resources.
+The repo needs an initial commit. The base agent selects the Docker kit and its credential
+integration. Every project sandbox gets Codex, Claude Code, Cursor, and Antigravity CLI.
+Defaults are 4 CPUs, 4 GiB, read-only shared skills, and the v3 T3 kit. Set the browser
+argument to `true` for agent-browser and Chromium. Append `-- --memory 8g` for more RAM.
 
 In T3: **Settings → Environments → Add environment → SSH**, host `my-project.sbx`.
 Docker supplies the SSH user; no identity file is needed. Add a project on that environment
-at **/home/agent/workspace**. In **Settings → Providers**, select that environment,
-enable the installed provider, and verify login. T3 manages its server and SSH tunnel.
+at **/home/agent/workspace**. In **Settings → Providers**, select that environment
+and enable the providers you use.
+
+| Provider | Sign in on the project environment |
+| --- | --- |
+| Codex | Use the Docker Codex kit's OAuth, or `codex login --device-auth` in the sandbox for a standalone ChatGPT login. |
+| Claude Code | Run `claude auth login` in the sandbox. |
+| Cursor | Run `agent login` in the sandbox. T3 uses the `cursor-agent` executable. |
+| Gemini via Antigravity | In T3, set the Antigravity binary path to `/home/agent/.local/bin/agy` and use **Sign in**. Update an older T3 environment if it lacks this option. |
+
+Google moved personal Gemini CLI accounts to Antigravity. See [Google's migration guide](https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/) and [T3's Antigravity setup](https://github.com/pingdotgg/t3code/blob/main/docs/user/providers-antigravity.md).
+
+When you hit a usage limit, finish the running turn and choose **New thread in this worktree**
+from T3's branch toolbar. Pick another signed-in provider and pass it the task and any open issues.
 
 ## Mobile access with Tailscale
 
@@ -90,19 +100,23 @@ Docker enforces isolation. Agent instructions do not enforce GitHub merge permis
 
 ## Maintenance and checks
 
-`refresh` repairs Node/npm, installs missing T3 tooling, and updates instructions without changing branches,
-dirty files, hooks, or auth. It does not upgrade installed T3/provider binaries.
-Update skills with `sbx skills update`; update T3 and providers between sessions.
-T3's built-in browser is separate from agent-browser and may need additional guest setup.
+Run **Refresh sandbox agents and tools** between sessions. It updates the four CLIs,
+refreshes the sandbox instructions, and preserves the checkout and logins. It reads the
+project from the sandbox's Git origin. To finish a partial setup or repair the optional browser,
+pass `OWNER/REPO` or `true` after the sandbox name. Use **Check sandbox** to verify SSH,
+the checkout, and tool versions.
 
-`check` verifies non-interactive SSH, Node/npm, T3, a committed checkout with an origin remote, instructions, and provider
-CLI discovery. Also test login, skills, GitHub push, a build, two worktrees, and restart/reconnect
-in T3 before merging. CI covers provisioning, Git, chezmoi, syntax, and secrets, not live providers.
+Model availability comes from your provider accounts. If T3 still shows an old list, refresh
+provider status for that environment. Use **Settings → Maintenance** to enable provider update
+checks and **Settings → Environments** to update T3 itself.
 
-Reuse existing managed sandboxes through `refresh`. Finish previous sessions first; preserve
-uncommitted/ignored work. Previous IDE history is not imported. Uninstall old apps and review
-guest packages, hooks, and published ports separately. Never delete whole agent homes or use
-`sbx reset` for this migration. T3 runtime, credentials, and histories stay out of source control.
+Use **Allow one network host in sandbox** for a blocked domain. **Allow all outbound networks in
+sandbox** adds a wildcard for that project. **Remove sandbox-wide network rule** removes that
+wildcard after confirmation. Docker's explicit deny rules still apply.
+
+**Publish sandbox port to localhost** takes the Mac port and the sandbox port. Use the same
+pair to remove the mapping. **List sandbox ports** shows what is currently published. Push or
+back up sandbox-only work before using **Delete sandbox and its files**.
 
 [Docker connection](https://docs.docker.com/ai/sandboxes/integrations/t3-code/) ·
 [T3 permissions](https://github.com/pingdotgg/t3code/blob/main/docs/user/permission-modes.md) ·

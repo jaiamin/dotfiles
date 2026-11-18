@@ -10,6 +10,15 @@ source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 state_dir="$HOME/.local/state/dotfiles"
 mkdir -p "$state_dir" "$HOME/.local/bin"
 
+npm_global() {
+  local options=(--global --prefix "$HOME/.local")
+  local http_proxy=${HTTP_PROXY:-${http_proxy:-}}
+  local https_proxy=${HTTPS_PROXY:-${https_proxy:-$http_proxy}}
+  [[ -z $http_proxy ]] || options+=(--proxy "$http_proxy")
+  [[ -z $https_proxy ]] || options+=(--https-proxy "$https_proxy")
+  npm install "${options[@]}" "$@"
+}
+
 # Keep a working image-provided runtime; otherwise install a guest-local LTS.
 ensure_node() (
   node_major=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)
@@ -47,9 +56,8 @@ ensure_node() (
   npx --version
 )
 
-if [[ ${1:-} == --browser ]]; then
-  ensure_node
-  command -v agent-browser >/dev/null || npm install --global --prefix "$HOME/.local" agent-browser
+setup_browser() (
+  command -v agent-browser >/dev/null || npm_global agent-browser
   # Playwright supplies Linux ARM64 builds. Do not rely on auto-discovery.
   npx --yes playwright@1.61.1 install --with-deps chromium
   browser_path=$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux*/chrome' -print -quit)
@@ -70,23 +78,123 @@ if [[ ${1:-} == --browser ]]; then
   install -m 600 "$tmp" "$config"
   agent-browser open about:blank
   agent-browser close
+)
+
+install_from() (
+  local installer
+  installer=$(mktemp) || exit
+  trap 'rm -f -- "$installer"' EXIT
+  curl -fsSL --retry 2 "$1" -o "$installer" || exit
+  bash "$installer"
+)
+
+update_cursor() {
+  if [[ -x $HOME/.local/bin/cursor-agent ]] && cursor-agent update; then
+    return
+  fi
+  install_from https://cursor.com/install
+}
+
+update_antigravity() {
+  if command -v agy >/dev/null; then
+    agy update
+  else
+    install_from https://antigravity.google/cli/install.sh
+  fi
+}
+
+setup_provider() {
+  local binary=$1
+  shift
+  if [[ $mode == refresh ]] || ! command -v "$binary" >/dev/null; then
+    printf '\nInstalling or updating %s\n' "$binary"
+    "$@" || return
+    hash -r
+  fi
+  "$binary" --version
+}
+
+setup_providers() (
+  flock -n 9 || { echo 'Another provider update is running in this sandbox.' >&2; exit 1; }
+  local failed=()
+  setup_provider codex npm_global --include=optional @openai/codex@latest || failed+=(Codex)
+  setup_provider claude install_from https://claude.ai/install.sh || failed+=(Claude)
+  setup_provider cursor-agent update_cursor || failed+=(Cursor)
+  setup_provider agy update_antigravity || failed+=(Antigravity)
+  if [[ ${failed[*]} ]]; then
+    printf 'Provider setup failed for %s. Fix the errors above and retry refresh.\n' "${failed[*]}" >&2
+    exit 1
+  fi
+) 9>"$state_dir/providers.lock"
+
+install_gitleaks() (
+  local version=8.30.1 arch tmp_dir
+  case $(uname -m) in
+    aarch64 | arm64) arch=arm64 ;;
+    x86_64) arch=x64 ;;
+    *) echo 'Unsupported Gitleaks architecture.' >&2; exit 1 ;;
+  esac
+  local archive="gitleaks_${version}_linux_${arch}.tar.gz"
+  local base="https://github.com/gitleaks/gitleaks/releases/download/v$version"
+  tmp_dir=$(mktemp -d)
+  trap 'rm -rf -- "$tmp_dir"' EXIT
+  cd "$tmp_dir"
+  curl -fsSL "$base/$archive" -o "$archive"
+  curl -fsSL "$base/gitleaks_${version}_checksums.txt" -o checksums.txt
+  awk -v file="$archive" '$2 == file { print; found=1 } END { if (!found) exit 1 }' \
+    checksums.txt >selected-checksum
+  sha256sum -c selected-checksum
+  tar -xzf "$archive" gitleaks
+  install -m 755 gitleaks "$HOME/.local/bin/gitleaks"
+)
+
+link_instructions() {
+  local target=$1 path=$2
+  if [[ -e $path || -L $path ]]; then
+    if [[ $(readlink "$path" || true) != "$target" ]]; then
+      printf 'Keeping existing instructions at %s\n' "$path" >&2
+    fi
+    return
+  fi
+  ln -s "$target" "$path"
+}
+
+if [[ ${1:-} == --browser ]]; then
+  ensure_node
+  setup_browser
   exit 0
 fi
 
-repo=${1:?Pass OWNER/REPO}
+repo=${1-}
 browser=${2:-false}
 git_name=${3:?Pass Git user name}
 git_email=${4:?Pass Git user email}
+mode=${5:-create}
+workspace=/home/agent/workspace
+
+if [[ $mode == refresh && -z $repo ]]; then
+  origin=$(git -C "$workspace" config --local --get remote.origin.url 2>/dev/null) || {
+    echo 'No project origin found. Run refresh with OWNER/REPO to finish setup.' >&2
+    exit 1
+  }
+  [[ $origin == https://github.com/* ]] || {
+    echo 'Expected a GitHub HTTPS origin. Run refresh with OWNER/REPO to check the checkout.' >&2
+    exit 1
+  }
+  repo=${origin#https://github.com/}
+  repo=${repo%.git}
+fi
+[[ $mode == create || $mode == refresh ]] || { echo 'Expected create or refresh.' >&2; exit 1; }
 case $browser in false | true) ;; *)
   echo 'Browser must be false or true.' >&2
   exit 1
   ;;
 esac
-command -v apt-get >/dev/null || {
-  echo 'This tool bootstrap requires a Debian/Ubuntu-based image. Use the selected kit directly for other distributions.' >&2
+[[ $repo =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ && $repo != */. && $repo != */.. ]] || {
+  echo 'Expected OWNER/REPO.' >&2
   exit 1
 }
-[[ $repo =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ && $repo != */. && $repo != */.. ]] || exit 1
+command -v apt-get >/dev/null || { echo 'Use a Debian/Ubuntu-based sandbox image.' >&2; exit 1; }
 if [[ ! -f $state_dir/tools-v1 ]]; then
   sudo apt-get update
   sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -96,29 +204,9 @@ fi
 ensure_node
 if [[ ! -f $state_dir/tools-v1 ]]; then
   command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
-  command -v pnpm >/dev/null || npm install --global --prefix "$HOME/.local" pnpm
+  command -v pnpm >/dev/null || npm_global pnpm
   if ! command -v gitleaks >/dev/null; then
-    version=8.30.1
-    case $(uname -m) in aarch64 | arm64) arch=arm64 ;; x86_64) arch=x64 ;; *)
-      echo 'Unsupported Gitleaks architecture.' >&2
-      exit 1
-      ;;
-    esac
-    archive="gitleaks_${version}_linux_${arch}.tar.gz"
-    tmp_dir=$(mktemp -d)
-    trap 'rm -rf -- "$tmp_dir"' EXIT
-    base="https://github.com/gitleaks/gitleaks/releases/download/v$version"
-    curl -fsSL "$base/$archive" -o "$tmp_dir/$archive"
-    curl -fsSL "$base/gitleaks_${version}_checksums.txt" -o "$tmp_dir/checksums.txt"
-    (
-      cd "$tmp_dir"
-      awk -v file="$archive" '$2 == file { print; found=1 } END { if (!found) exit 1 }' checksums.txt >selected-checksum
-      sha256sum -c selected-checksum
-    )
-    tar -xzf "$tmp_dir/$archive" -C "$tmp_dir" gitleaks
-    install -m 755 "$tmp_dir/gitleaks" "$HOME/.local/bin/gitleaks"
-    rm -rf -- "$tmp_dir"
-    trap - EXIT
+    install_gitleaks
   fi
   touch "$state_dir/tools-v1"
 fi
@@ -126,10 +214,7 @@ fi
 # T3 readiness also runs on refresh of an existing managed sandbox.
 # New sandboxes receive t3 from Docker's kit; older ones install it here.
 if ! command -v t3 >/dev/null; then
-  t3_options=(--global --prefix "$HOME/.local")
-  [[ -z ${HTTP_PROXY:-} ]] || t3_options+=(--proxy "$HTTP_PROXY")
-  [[ -z ${HTTPS_PROXY:-${HTTP_PROXY:-}} ]] || t3_options+=(--https-proxy "${HTTPS_PROXY:-$HTTP_PROXY}")
-  npm install "${t3_options[@]}" t3@latest
+  npm_global t3@latest
 fi
 # Fail provisioning now if a native dependency is missing, rather than timing out in T3.
 t3 --version
@@ -144,21 +229,6 @@ for setting in 'export PATH="$HOME/.local/bin:$PATH"' \
   fi
 done
 
-# One generated instruction file, shared by all supported agent locations.
-mkdir -p "$HOME/.config/dotfiles" "$HOME/.claude" "$HOME/.codex" "$HOME/.config/opencode" "$HOME/.config/git"
-cat "$source_dir/base.md" "$source_dir/AGENTS.md" >"$HOME/.config/dotfiles/AGENTS.md"
-ln -sfn ../.config/dotfiles/AGENTS.md "$HOME/.claude/CLAUDE.md"
-ln -sfn ../.config/dotfiles/AGENTS.md "$HOME/.codex/AGENTS.md"
-ln -sfn ../dotfiles/AGENTS.md "$HOME/.config/opencode/AGENTS.md"
-install -m 644 "$source_dir/gitignore" "$HOME/.config/git/ignore"
-git config --global user.name "$git_name"
-git config --global user.email "$git_email"
-git config --global init.defaultBranch main
-git config --global push.autoSetupRemote true
-git config --global fetch.prune true
-git config --global core.excludesFile "$HOME/.config/git/ignore"
-
-workspace=/home/agent/workspace
 if [[ ! -e $workspace/.git ]]; then
   # Git refuses a nonempty destination. Never overwrite or clean it automatically.
   git -c 'credential.helper=!gh auth git-credential' clone "https://github.com/$repo.git" "$workspace"
@@ -193,7 +263,32 @@ fi
 # Task ownership belongs to T3 Code or ordinary Git worktrees.
 # Never switch or reset the primary checkout during a refresh.
 git -C "$workspace" config pull.ff only
+
+# Share the generated guidance while preserving user-authored instructions.
+mkdir -p "$HOME/.config/dotfiles" "$HOME/.config/git" "$HOME/.config/opencode" \
+  "$HOME/.claude" "$HOME/.codex" "$HOME/.gemini"
+instructions="$HOME/.config/dotfiles/AGENTS.md"
+[[ ! -d $instructions ]] || { echo 'Expected an instructions file, found a directory.' >&2; exit 1; }
+# Publish a complete file so an agent starting during refresh sees valid guidance.
+tmp=$(mktemp "${instructions}.XXXXXX")
+trap 'rm -f -- "$tmp"' EXIT
+cat "$source_dir/base.md" "$source_dir/AGENTS.md" >"$tmp"
+mv -f -- "$tmp" "$instructions"
+trap - EXIT
+link_instructions ../.config/dotfiles/AGENTS.md "$HOME/.claude/CLAUDE.md"
+link_instructions ../.config/dotfiles/AGENTS.md "$HOME/.codex/AGENTS.md"
+link_instructions ../dotfiles/AGENTS.md "$HOME/.config/opencode/AGENTS.md"
+link_instructions ../.config/dotfiles/AGENTS.md "$HOME/.gemini/AGENTS.md"
+install -m 644 "$source_dir/gitignore" "$HOME/.config/git/ignore"
+git config --global user.name "$git_name"
+git config --global user.email "$git_email"
+git config --global init.defaultBranch main
+git config --global push.autoSetupRemote true
+git config --global fetch.prune true
+git config --global core.excludesFile "$HOME/.config/git/ignore"
+
+setup_providers
 if [[ $browser == true ]]; then
-  bash "$source_dir/bootstrap.sh" --browser
+  setup_browser
 fi
 printf 'Ready: %s. Use one writer per task branch/worktree.\n' "$workspace"

@@ -37,6 +37,7 @@ with open(os.environ['MOCK_LOG'],'a') as f: f.write(json.dumps(a)+'\\n')
 if a==['ls','-q']: print(os.environ.get('EXISTING',''))
 if a[0]=='create' and os.environ.get('FAIL_CREATE'): sys.exit(1)
 if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
+if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
 ''')
         stub.chmod(0o755)
 
@@ -135,8 +136,53 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         policy = next(x for x in calls if x[0]=='policy')
         self.assertIn('registry.npmjs.org',policy[-1])
         self.assertFalse(any(x[0] in ('create','run','ports','rm') for x in calls))
+        self.assertEqual(calls[-1][-5:-3],['owner/repo','false'])
+        self.assertEqual(calls[-1][-1],'refresh')
+
+    def test_refresh_accepts_only_the_sandbox_name(self):
+        result = self.run_manager('refresh','my-project')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(self.calls()[-1][-5:-3],['','false'])
+
+    def test_ports_use_exact_loopback_mapping_and_support_legacy_docker(self):
+        cases = [
+            ('publish','port', ['publish','my-project','127.0.0.1:3000:8080']),
+            ('unpublish','port', ['unpublish','my-project','127.0.0.1:3000:8080']),
+            ('publish','ports', ['my-project','--publish','127.0.0.1:3000:8080']),
+        ]
+        for action, command, args in cases:
+            with self.subTest(action=action,command=command):
+                if command == 'ports':
+                    self.env['LEGACY_PORTS']='1'
+                result = self.run_manager(action,'my-project','3000','8080')
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(self.calls()[-1],[command,*args])
+
+    def test_invalid_ports_and_network_targets_never_reach_docker(self):
+        for args in (
+            ('publish','my-project','0.0.0.0:3000','8080'),
+            ('unpublish','my-project','3000','65536'),
+            ('unpublish','my-project','8080'),
+            ('network-open','--all'),
+            ('network-allow','my-project','**'),
+            ('network-allow','my-project','example.com,other.com'),
+        ):
+            with self.subTest(args=args):
+                self.assertNotEqual(self.run_manager(*args).returncode,0)
+        self.assertEqual(self.calls(),[])
+
+    def test_network_commands_target_only_the_chosen_sandbox(self):
+        for args in (('network-allow','example.com:443'),('network-open',),('network-restore',)):
+            result = self.run_manager(args[0],'my-project',*args[1:])
+            self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(self.calls(),[
+            ['policy','allow','network','--sandbox','my-project','example.com:443'],
+            ['policy','allow','network','--sandbox','my-project','--protocol','tcp,udp','**'],
+            ['policy','rm','network','--sandbox','my-project','--resource','**'],
+        ])
 
     def test_guest_script_refuses_native_execution(self):
+        self.env['HOME']=str(self.root)
         result = subprocess.run(['bash',str(BOOTSTRAP)],env=self.env,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('inside a Docker Sandbox',result.stderr)
@@ -145,8 +191,13 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
 def node_setup_source():
     source = BOOTSTRAP.read_text()
     start = source.index('ensure_node() (')
-    end = source.index('\nif [[ ',start)
+    end = source.index('\nsetup_browser()',start)
     return source[start:end]
+
+
+def npm_global_source():
+    source = BOOTSTRAP.read_text()
+    return source[source.index('npm_global() {'):source.index('# Keep a working')]
 
 
 class NodeBootstrapTests(unittest.TestCase):
@@ -186,6 +237,9 @@ root=pathlib.Path(os.environ['HOME'])
 args=sys.argv[1:]
 with (root/'downloads.jsonl').open('a') as log: log.write(json.dumps(args)+'\\n')
 if os.environ.get('FAIL_DOWNLOAD'): sys.exit(22)
+if args[3] in ('https://claude.ai/install.sh','https://cursor.com/install'):
+    pathlib.Path(args[-1]).write_text('exit 0')
+    sys.exit()
 url=args[0] if not args[0].startswith('-') else args[1]
 dest=pathlib.Path(args[args.index('-o')+1])
 arch='arm64' if os.environ.get('TEST_ARCH') in ('arm64','aarch64') else 'x64'
@@ -248,12 +302,13 @@ else: shutil.copyfile(fixture,dest)
         self.assertFalse((self.local/'node').exists())
 
     def exercise_full_bootstrap(self,marked):
-        for name in ('cat','install','chmod','dirname','grep','tee','git','env','touch'):
+        for name in ('cat','install','chmod','dirname','grep','tee','git','env','touch','mv','readlink'):
             (self.bin/name).symlink_to(shutil.which(name))
+        (self.bin/'bash').symlink_to(self.bash)
         self.tool('id','#!/bin/sh\necho 1000\n')
         self.tool('sudo',f'#!{sys.executable}\nimport os,sys\nos.execvpe(sys.argv[1],sys.argv[1:],os.environ)\n')
         self.tool('apt-get','#!/bin/sh\nexit 0\n')
-        for name in ('uv','pnpm','gitleaks'):
+        for name in ('uv','pnpm','gitleaks','flock','codex','claude','cursor-agent','agy'):
             self.tool(name,'#!/bin/sh\nexit 0\n')
         self.tool('t3','#!/bin/sh\nexec node --version\n')
         def git(*args):
@@ -291,12 +346,43 @@ else: shutil.copyfile(fixture,dest)
         self.assertEqual((workspace/'README').read_text(),'initial\n')
         self.assertTrue((self.local/'node').exists())
         self.assertIn('Ready:',result.stdout)
+        if marked:
+            (self.local/'node').unlink()
+            (workspace/'README').write_text('unfinished work\n')
+            custom_instructions = self.root/'.claude/CLAUDE.md'
+            custom_instructions.unlink()
+            custom_instructions.write_text('my instructions\n')
+            result = subprocess.run([self.bash,str(script),'','false','Test','test@example.invalid','refresh'],
+                                    env=self.env,capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertTrue((self.local/'node').exists())
+            self.assertEqual((workspace/'README').read_text(),'unfinished work\n')
+            self.assertEqual(custom_instructions.read_text(),'my instructions\n')
+            self.assertTrue((self.root/'.gemini/AGENTS.md').is_symlink())
 
     def test_fresh_image_without_node_reaches_repository_clone(self):
         self.exercise_full_bootstrap(marked=False)
 
     def test_refresh_with_old_tools_marker_repairs_node_and_clones(self):
         self.exercise_full_bootstrap(marked=True)
+
+    def test_provider_refresh_continues_after_one_install_fails(self):
+        (self.bin/'bash').symlink_to(self.bash)
+        self.tool('flock','#!/bin/sh\nexit 0\n')
+        self.tool('npm','#!/bin/sh\necho "npm $*"\nexit 17\n')
+        self.tool('curl','#!/bin/sh\nprintf "echo %s\\n" "$4" >"$6"\n')
+        for binary in ('claude','cursor-agent','agy'):
+            self.tool(binary,f'#!/bin/sh\necho "{binary} $*"\n')
+        (self.bin/'cursor-agent').rename(self.local/'cursor-agent')
+        source = BOOTSTRAP.read_text()
+        providers = source[source.index('install_from() ('):source.index('install_gitleaks() (')]
+        self.script.write_text('set -euo pipefail\nmode=refresh\nstate_dir=$HOME\n'+npm_global_source()
+                               +providers+'setup_providers\n')
+        result = self.run_setup()
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn('Provider setup failed for Codex.',result.stderr)
+        for command in ('@openai/codex@latest','https://claude.ai/install.sh','cursor-agent update','agy update'):
+            self.assertIn(command,result.stdout)
 
 
 @unittest.skipUnless(os.environ.get('TEST_NODE_DOWNLOAD')=='1','real Linux runtime download is CI-only')
@@ -335,7 +421,7 @@ class T3BootstrapTests(unittest.TestCase):
         source = BOOTSTRAP.read_text()
         section = source[source.index('# T3 readiness'):source.index('# sbx sources this')]
         self.script = self.root/'t3-setup.sh'
-        self.script.write_text('set -euo pipefail\n'+section)
+        self.script.write_text('set -euo pipefail\n'+npm_global_source()+section)
         self.log = self.root/'npm.json'
         npm = self.bin/'npm'
         npm.write_text(f'#!{self.python}\n'+'''import json, os, pathlib, sys

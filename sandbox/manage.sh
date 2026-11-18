@@ -6,8 +6,11 @@ die() {
   exit 1
 }
 usage='Usage: manage.sh create NAME OWNER/REPO AGENT [false|true] [-- SBX_OPTIONS...]
-       manage.sh refresh NAME OWNER/REPO [false|true]
-       manage.sh check NAME'
+       manage.sh refresh NAME [OWNER/REPO] [false|true]
+       manage.sh check|ports|network-open|network-restore NAME
+       manage.sh network-allow NAME HOST[:PORT]
+       manage.sh publish|unpublish NAME HOST_PORT SANDBOX_PORT
+       manage.sh auth-set|auth-remove NAME openai|anthropic'
 [[ $# -ge 2 ]] || die "$usage"
 action=$1 name=$2
 shift 2
@@ -16,10 +19,56 @@ here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd -- "$here/.." && pwd)
 command -v sbx >/dev/null || die 'Install Docker Sandboxes (sbx) first.'
 
-if [[ $action == check ]]; then
-  [[ $# -eq 0 ]] || die "$usage"
+managed_sandbox() {
+  sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed ||
+    die "Expected a dotfiles-managed sandbox: $name"
+}
+
+validate_port() {
+  if [[ ! $1 =~ ^[1-9][0-9]{0,4}$ ]] || (( $1 > 65535 )); then
+    die "Invalid port: $1"
+  fi
+}
+
+port_command() {
+  local command=$1
+  shift
+  if sbx port --help >/dev/null 2>&1; then
+    sbx port "$command" "$name" "$@"
+  elif [[ $command == ls ]]; then
+    sbx ports "$name"
+  else
+    sbx ports "$name" "--$command" "$@"
+  fi
+}
+
+provider_key() {
+  local host key placeholder=''
+  case $1 in
+    openai) host=api.openai.com; key=OPENAI_API_KEY ;;
+    anthropic) host=api.anthropic.com; key=ANTHROPIC_API_KEY ;;
+    *) die 'Choose openai or anthropic.' ;;
+  esac
+  if [[ $action == auth-set ]]; then
+    placeholder="sbx-cs-$(openssl rand -hex 12)"
+    sbx policy allow network --sandbox "$name" "$host:443"
+    sbx secret set-custom --sandbox "$name" --host "$host" --env "$key" --placeholder "$placeholder"
+  else
+    sbx secret rm --sandbox "$name" --host "$host" --env-name "$key"
+  fi
+  # shellcheck disable=SC2016
+  sbx exec -u root "$name" -- sh -eu -c '
+    file=/etc/sandbox-persistent.sh
+    [ -f "$file" ] || [ -n "$2" ] || exit 0
+    touch "$file"
+    sed -i "/^export $1=sbx-cs-[[:xdigit:]]\{24\}$/d" "$file"
+    if [ -n "$2" ]; then printf "\nexport %s=%s\n" "$1" "$2" >>"$file"; fi
+  ' sh "$key" "$placeholder"
+}
+
+check_sandbox() {
   command -v ssh >/dev/null || die 'Missing SSH client.'
-  sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed
+  managed_sandbox
   # Exercise the same non-interactive SSH path used by the T3 desktop app.
   ssh -o BatchMode=yes -o ConnectTimeout=10 "$name.sbx" 'bash -s' <<'CHECK'
 set -euo pipefail
@@ -28,34 +77,62 @@ set -euo pipefail
   exit 1
 }
 test -f "$HOME/.config/dotfiles/managed"
-node --version
-npm --version
-command -v t3 >/dev/null || { echo 'T3 is missing; run manage.sh refresh.' >&2; exit 1; }
-t3 --version
 test -f "$HOME/.config/dotfiles/AGENTS.md"
 git -C /home/agent/workspace rev-parse --verify HEAD >/dev/null
 git -C /home/agent/workspace remote get-url origin >/dev/null
-found=false
-for provider in claude codex opencode; do
-  if command -v "$provider" >/dev/null; then
-    printf 'Available provider: %s\n' "$provider"
-    found=true
+failed=0
+for tool in node npm t3 codex claude cursor-agent agy; do
+  printf '%s: ' "$tool"
+  if ! "$tool" --version; then
+    printf 'Check failed for %s. Run manage.sh refresh.\n' "$tool" >&2
+    failed=1
   fi
 done
-[[ $found == true ]] || {
-  echo 'No Claude, Codex, or OpenCode CLI found. Install a supported provider in this sandbox.' >&2
-  exit 1
-}
-printf 'SSH, T3, instructions, and checkout are ready. Verify provider authentication in T3.\n'
+exit "$failed"
 CHECK
-  exit
-fi
+}
 
-[[ $action == create || $action == refresh ]] || die "$usage"
-[[ $# -ge 1 ]] || die "$usage"
-repo=$1
-shift
-[[ $repo =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ && $repo != */. && $repo != */.. ]] || die 'Expected OWNER/REPO.'
+case $action in
+  check | ports | network-open | network-restore)
+    [[ $# -eq 0 ]] || die "$usage"
+    case $action in
+      check) check_sandbox ;;
+      ports) port_command ls ;;
+      network-open) sbx policy allow network --sandbox "$name" --protocol tcp,udp '**' ;;
+      network-restore) sbx policy rm network --sandbox "$name" --resource '**' ;;
+    esac
+    exit
+    ;;
+  network-allow)
+    [[ $# -eq 1 ]] || die "$usage"
+    [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9](:[1-9][0-9]{0,4})?$ && $1 == *.* ]] || die 'Expected a hostname or hostname:port.'
+    if [[ $1 == *:* ]]; then validate_port "${1##*:}"; fi
+    sbx policy allow network --sandbox "$name" "$1"
+    exit
+    ;;
+  publish | unpublish)
+    [[ $# -eq 2 ]] || die "$usage"
+    validate_port "$1"
+    validate_port "$2"
+    port_command "$action" "127.0.0.1:$1:$2"
+    exit
+    ;;
+  auth-set | auth-remove)
+    [[ $# -eq 1 ]] || die "$usage"
+    provider_key "$1"
+    exit
+    ;;
+  create | refresh) ;;
+  *) die "$usage" ;;
+esac
+
+repo=''
+if [[ $action == create || $# -gt 0 && $1 != true && $1 != false ]]; then
+  [[ $# -gt 0 ]] || die "$usage"
+  repo=$1
+  shift
+  [[ $repo =~ ^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$ && $repo != */. && $repo != */.. ]] || die 'Expected OWNER/REPO.'
+fi
 if [[ $action == create ]]; then
   [[ $# -ge 1 && -n $1 && $1 != -* ]] || die "$usage"
   agent=$1
@@ -100,26 +177,36 @@ if [[ $action == create ]]; then
   done <<<"$existing"
   # Omitting the workspace path is deliberate. Docker owns agent/auth configuration.
   sbx create "$agent" --name "$name" "${options[@]}"
-  # Explicit setup/service domains; keep the rest of the sandbox policy intact.
-  sbx policy allow network --sandbox "$name" \
-    'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com,registry.npmjs.org,nodejs.org,astral.sh,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com,cdn.playwright.dev,playwright.download.prss.microsoft.com,storage.googleapis.com,context7.com,mcp.context7.com'
 else
-  sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed
-  # Existing sandboxes need the same setup destinations as new ones.
-  sbx policy allow network --sandbox "$name" \
-    'registry.npmjs.org,nodejs.org,github.com,release-assets.githubusercontent.com,archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com'
+  managed_sandbox
 fi
+
 destination=/home/agent/.config/dotfiles/source
 sbx exec -u 1000 "$name" -- mkdir -p "$destination"
 sbx exec -u 1000 "$name" -- touch /home/agent/.config/dotfiles/managed
+
+# Installer and sign-in endpoints. Scope to the named sandbox.
+hosts=(
+  'github.com,api.github.com,raw.githubusercontent.com,release-assets.githubusercontent.com,objects.githubusercontent.com'
+  'registry.npmjs.org,nodejs.org,astral.sh,pypi.org,files.pythonhosted.org'
+  'archive.ubuntu.com,security.ubuntu.com,ports.ubuntu.com,deb.debian.org,security.debian.org,download.docker.com,cli.github.com'
+  'context7.com,mcp.context7.com,storage.googleapis.com'
+  'api.openai.com,auth.openai.com,chatgpt.com'
+  'api.anthropic.com,claude.ai,claude.com,platform.claude.com,downloads.claude.ai'
+  'cursor.com,downloads.cursor.com,**.cursor.sh,*.cursorapi.com,accounts.spacex.ai,accounts.x.ai'
+  'antigravity.google,antigravity-cli-auto-updater-974169037036.us-central1.run.app'
+  'accounts.google.com,oauth2.googleapis.com,cloudcode-pa.googleapis.com,daily-cloudcode-pa.googleapis.com,antigravity.googleapis.com,www.googleapis.com'
+)
+if [[ $browser == true ]]; then
+  hosts+=('cdn.playwright.dev,playwright.download.prss.microsoft.com')
+fi
+(IFS=,; sbx policy allow network --sandbox "$name" "${hosts[*]}")
+
 for file in bootstrap.sh AGENTS.md; do
   sbx cp "$here/$file" "$name:$destination/$file"
 done
 sbx cp "$root/dot_codex/AGENTS.md" "$name:$destination/base.md"
 sbx cp "$root/dot_config/git/ignore" "$name:$destination/gitignore"
 sbx exec -u 1000 "$name" -- bash "$destination/bootstrap.sh" \
-  "$repo" "$browser" "$git_name" "$git_email"
-printf '\nSSH: %s.sbx (user _default_user_, no identity file)\n' "$name"
-printf 'Remote repository: /home/agent/workspace\n'
-printf 'T3 Code: add SSH environment %s.sbx, then add /home/agent/workspace.\n' "$name"
-printf 'Check connection: bash sandbox/manage.sh check %s\n' "$name"
+  "$repo" "$browser" "$git_name" "$git_email" "$action"
+printf '\nT3 SSH host: %s.sbx\nProject path: /home/agent/workspace\n' "$name"
