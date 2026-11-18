@@ -1,7 +1,7 @@
 # dotfiles
 
-Apple Silicon Mac preferences and T3 Code over SSH to mountless Docker Sandboxes.
-Code, agents, dependencies, and task worktrees stay inside each project sandbox.
+Apple Silicon Mac preferences and mountless Docker Sandboxes. Connect to a project over
+SSH from T3 Code, another editor, or a terminal.
 
 ## Install
 
@@ -12,18 +12,17 @@ chezmoi init --apply jaiamin
 brew bundle --file="$(chezmoi source-path)/Brewfile"
 ```
 
-Follow [sandbox setup](sandbox/README.md). In `navi`, search `sandbox` for daily commands.
-Native agent settings remain available for supervised Mac work.
+Follow [sandbox setup](sandbox/README.md). Press **Ctrl+G** in Zsh and search `sandbox`
+for project setup, agent updates, ports, and network access.
 
 ## Update
 
 ```sh
-chezmoi update
-brew update
+git -C "$(chezmoi source-path)" pull --ff-only
+chezmoi diff
+chezmoi apply
 brew bundle --file="$(chezmoi source-path)/Brewfile"
-sbx skills update
 ```
 
-Review `chezmoi diff` before applying. `git pull` updates source; `chezmoi apply` deploys it.
-Existing sandboxes use `manage.sh refresh`; installed T3/provider binaries update separately.
-Back up edits to paths in `.chezmoiremove`. App removal and existing runtime cleanup are manual.
+Review `chezmoi diff` before applying, including any removals from `.chezmoiremove`.
+Use **Refresh sandbox agents and tools** in Navi to update an existing sandbox.
