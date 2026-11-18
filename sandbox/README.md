@@ -1,8 +1,8 @@
-# T3 Code + Docker Sandboxes
+# Project sandboxes
 
 One mountless sandbox per project; one task branch/worktree per writer.
-T3's UI runs on the Mac. Its server, agents, checkout, builds, and dependencies run in Linux.
-Requires Docker Sandboxes 0.51.0+, T3 Code, and a Debian/Ubuntu agent template.
+The checkout, agent CLIs, and development tools run in Linux. Connect over SSH from a shell or IDE.
+Requires Docker Sandboxes 0.51.0+ and a Debian/Ubuntu agent template.
 Bootstrap installs guest-local Node.js 24 LTS/npm when Node 22+ and working npm/npx are unavailable.
 
 ## One-time setup
@@ -20,7 +20,7 @@ bash "$(chezmoi source-path)/skills.sh"
 On fresh installs, use `sbx policy init balanced`. Use `sbx secret set openai --oauth`
 on the Mac if you use Docker's Codex kit with a ChatGPT subscription.
 
-## Create and connect
+## Create a sandbox
 
 From the dotfiles source directory, or use Navi:
 
@@ -33,13 +33,18 @@ bash sandbox/manage.sh refresh my-project
 
 The repo needs an initial commit. The base agent selects the Docker kit and its credential
 integration. Every project sandbox gets Codex, Claude Code, Cursor, and Antigravity CLI.
-Defaults are 4 CPUs, 4 GiB, read-only shared skills, and the v3 T3 kit. Set the browser
-argument to `true` for agent-browser and Chromium. Append `-- --memory 8g` for more RAM.
+Defaults are 4 CPUs, 4 GiB, and read-only shared skills. Set the browser argument to `true`
+for agent-browser and Chromium. Append `-- --memory 8g` for more RAM.
+Open a shell with `ssh my-project.sbx` and work in `/home/agent/workspace`.
+
+## Connect T3 Code
 
 In T3: **Settings → Environments → Add environment → SSH**, host `my-project.sbx`.
 Docker supplies the SSH user; no identity file is needed. Add a project on that environment
 at **/home/agent/workspace**. In **Settings → Providers**, select that environment
-and enable the providers you use.
+and enable the providers you use. T3 downloads and verifies its own versioned SSH server on
+first connection. For a standalone `t3` CLI, you can explicitly add `-- --kit docker.io/sbx/t3code:latest`
+when creating a sandbox. [T3 SSH setup](https://github.com/pingdotgg/t3code/blob/main/docs/user/remote-access.md#desktop-managed-ssh)
 
 | Provider | Sign in on the project environment |
 | --- | --- |
@@ -84,19 +89,13 @@ and rerun each forward. No guest DNS edits or T3 restart are needed for this set
 [T3 pairing](https://github.com/pingdotgg/t3code/blob/main/docs/user/remote-access.md) ·
 [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve)
 
-## Autonomous work
+## Worktrees
 
-- Choose the remote project, **New worktree**, and **Full access** for each task.
-  Set project defaults under **Settings → Threads → New threads → Permissions**.
-- Give a concrete goal and verification command. Guest instructions allow task-branch commits,
-  pushes, and a draft PR; merging and boundary/credential changes require approval.
-- Use one active writer per worktree and separate dependencies, databases, and service ports.
-  Worktrees share the VM; use another sandbox for stronger isolation.
-- Keep long sessions running with `sbx run --detach --name my-project`.
-  Stop after work finishes with `sbx stop my-project`. Mac sleep interrupts availability.
-
-Full access reduces approval prompts; provider policies can still ask or reject commands.
-Docker enforces isolation. Agent instructions do not enforce GitHub merge permissions.
+Use one writer per worktree and separate service ports for parallel tasks. Use a separate
+sandbox when tasks need separate VMs. In T3, **New worktree** creates the checkout.
+**Settings → Worktrees → Cleanup** controls eligible T3 worktrees. T3 skips live sessions
+and open terminals, and checks local changes according to the selected policy. For shell work,
+use Git's `worktree` commands. [T3 cleanup settings](https://github.com/pingdotgg/t3code/blob/main/docs/user/project-settings.md#storage-cleanup)
 
 ## Maintenance and checks
 
@@ -104,7 +103,7 @@ Run **Refresh sandbox agents and tools** between sessions. It updates the four C
 refreshes the sandbox instructions, and preserves the checkout and logins. It reads the
 project from the sandbox's Git origin. To finish a partial setup or repair the optional browser,
 pass `OWNER/REPO` or `true` after the sandbox name. Use **Check sandbox** to verify SSH,
-the checkout, and tool versions.
+the checkout, and agent versions.
 
 Model availability comes from your provider accounts. If T3 still shows an old list, refresh
 provider status for that environment. Use **Settings → Maintenance** to enable provider update

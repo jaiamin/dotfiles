@@ -47,8 +47,8 @@ if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
     def calls(self):
         return [json.loads(x) for x in self.log.read_text().splitlines()] if self.log.exists() else []
 
-    def test_builtin_agents_use_v3_t3_without_workspace_mount_or_agent_launch(self):
-        for agent in ('codex','claude','opencode'):
+    def test_builtin_agents_create_without_ide_kit_workspace_mount_or_agent_launch(self):
+        for agent in ('codex','claude','cursor','opencode'):
             with self.subTest(agent=agent):
                 if self.log.exists():
                     self.log.unlink()
@@ -58,7 +58,7 @@ if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
                 create = next(x for x in calls if x[0]=='create')
                 self.assertEqual(create,[
                     'create',agent,'--name','my-project','--cpus','4','--memory','4g',
-                    '--skills','readonly','--kit','docker.io/sbx/t3code:latest',
+                    '--skills','readonly',
                 ])
                 self.assertFalse(any(x[0]=='run' for x in calls))
                 copied = [x[1] for x in calls if x[0]=='cp']
@@ -68,11 +68,12 @@ if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
 
     def test_agent_kit_reference_and_resource_options_are_preserved(self):
         kit = 'docker.io/sbx/codex:latest'
-        result = self.run_manager('create','my-project','owner/repo',kit,'true','--','--memory','8g')
+        addon = 'docker.io/sbx/t3code:latest'
+        result = self.run_manager('create','my-project','owner/repo',kit,'true','--','--kit',addon,'--memory','8g')
         self.assertEqual(result.returncode,0,result.stderr)
         create = next(x for x in self.calls() if x[0]=='create')
         self.assertEqual(create[1],kit)
-        self.assertEqual(create[-2:],['--memory','8g'])
+        self.assertEqual(create[-4:],['--kit',addon,'--memory','8g'])
 
     def test_invalid_inputs_never_create(self):
         cases = [
@@ -128,7 +129,7 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         self.assertNotEqual(self.run_manager('check','my-project').returncode,0)
         self.assertEqual(len(self.calls()),1)
 
-    def test_refresh_enables_t3_setup_without_mounting_or_starting_an_agent(self):
+    def test_refresh_does_not_recreate_mount_or_start_an_agent(self):
         result = self.run_manager('refresh','my-project','owner/repo')
         self.assertEqual(result.returncode,0,result.stderr)
         calls = self.calls()
@@ -310,7 +311,6 @@ else: shutil.copyfile(fixture,dest)
         self.tool('apt-get','#!/bin/sh\nexit 0\n')
         for name in ('uv','pnpm','gitleaks','flock','codex','claude','cursor-agent','agy'):
             self.tool(name,'#!/bin/sh\nexit 0\n')
-        self.tool('t3','#!/bin/sh\nexec node --version\n')
         def git(*args):
             return subprocess.run([str(self.bin/'git'),*args],env=self.env,
                                   capture_output=True,text=True,check=True)
@@ -374,6 +374,9 @@ else: shutil.copyfile(fixture,dest)
         for binary in ('claude','cursor-agent','agy'):
             self.tool(binary,f'#!/bin/sh\necho "{binary} $*"\n')
         (self.bin/'cursor-agent').rename(self.local/'cursor-agent')
+        for key in ('HTTPS_PROXY','https_proxy'):
+            self.env.pop(key,None)
+        self.env['HTTP_PROXY']='http://proxy.invalid:3128'
         source = BOOTSTRAP.read_text()
         providers = source[source.index('install_from() ('):source.index('install_gitleaks() (')]
         self.script.write_text('set -euo pipefail\nmode=refresh\nstate_dir=$HOME\n'+npm_global_source()
@@ -383,6 +386,7 @@ else: shutil.copyfile(fixture,dest)
         self.assertIn('Provider setup failed for Codex.',result.stderr)
         for command in ('@openai/codex@latest','https://claude.ai/install.sh','cursor-agent update','agy update'):
             self.assertIn(command,result.stdout)
+        self.assertIn('--proxy http://proxy.invalid:3128 --https-proxy http://proxy.invalid:3128',result.stdout)
 
 
 @unittest.skipUnless(os.environ.get('TEST_NODE_DOWNLOAD')=='1','real Linux runtime download is CI-only')
@@ -402,72 +406,6 @@ class NodeDownloadTests(unittest.TestCase):
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertIn('v24.22.2',result.stdout)
             self.assertTrue((root/'.local/bin/npm').exists())
-
-
-class T3BootstrapTests(unittest.TestCase):
-    def setUp(self):
-        import sys
-        self.python = sys.executable
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name).resolve()
-        self.bin = self.root/'bin'
-        self.bin.mkdir()
-        self.local = self.root/'.local/bin'
-        self.local.mkdir(parents=True)
-        self.env = dict(os.environ, HOME=str(self.root), PATH=f'{self.local}:{self.bin}')
-        for key in ('HTTP_PROXY','HTTPS_PROXY','http_proxy','https_proxy'):
-            self.env.pop(key,None)
-        source = BOOTSTRAP.read_text()
-        section = source[source.index('# T3 readiness'):source.index('# sbx sources this')]
-        self.script = self.root/'t3-setup.sh'
-        self.script.write_text('set -euo pipefail\n'+npm_global_source()+section)
-        self.log = self.root/'npm.json'
-        npm = self.bin/'npm'
-        npm.write_text(f'#!{self.python}\n'+'''import json, os, pathlib, sys
-root = pathlib.Path(os.environ['HOME'])
-(root/'npm.json').write_text(json.dumps(sys.argv[1:]))
-if os.environ.get('FAIL_NPM'): sys.exit(17)
-binary = root/'.local/bin/t3'
-binary.write_text('#!/bin/sh\\nexit 0\\n')
-binary.chmod(0o755)
-''')
-        npm.chmod(0o755)
-        self.bash = shutil.which(HOST_BASH)
-
-    def setup_t3(self):
-        return subprocess.run([self.bash,str(self.script)],env=self.env,capture_output=True,text=True)
-
-    def test_installs_missing_t3_in_guest_home_with_proxy(self):
-        self.env.update(HTTP_PROXY='http://proxy.invalid:3128',HTTPS_PROXY='http://secure-proxy.invalid:3128')
-        result = self.setup_t3()
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(json.loads(self.log.read_text()),[
-            'install','--global','--prefix',str(self.root/'.local'),
-            '--proxy','http://proxy.invalid:3128',
-            '--https-proxy','http://secure-proxy.invalid:3128','t3@latest',
-        ])
-        self.log.unlink()
-        self.assertEqual(self.setup_t3().returncode,0)
-        self.assertFalse(self.log.exists())
-
-    def test_http_proxy_also_supplies_https_fallback(self):
-        self.env['HTTP_PROXY']='http://proxy.invalid:3128'
-        self.assertEqual(self.setup_t3().returncode,0)
-        args = json.loads(self.log.read_text())
-        self.assertEqual(args[args.index('--https-proxy')+1],self.env['HTTP_PROXY'])
-
-    def test_existing_broken_t3_fails_without_reinstalling(self):
-        binary = self.local/'t3'
-        binary.write_text('#!/bin/sh\nexit 19\n')
-        binary.chmod(0o755)
-        self.assertEqual(self.setup_t3().returncode,19)
-        self.assertFalse(self.log.exists())
-
-    def test_install_failure_is_not_reported_as_ready(self):
-        self.env['FAIL_NPM']='1'
-        self.assertEqual(self.setup_t3().returncode,17)
-        self.assertFalse((self.local/'t3').exists())
 
 
 class GitTests(unittest.TestCase):
@@ -495,7 +433,7 @@ class GitTests(unittest.TestCase):
         self.git('config','--global',f'url.{remotes.as_uri()}/.insteadOf','https://github.com/')
         source=BOOTSTRAP.read_text()
         start=source.index('if [[ ! -e $workspace/.git ]]')
-        end=source.index('# Task ownership')
+        end=source.index('# Set the pull policy')
         self.script=self.root/'repo-setup.sh'
         self.script.write_text('set -euo pipefail\nworkspace=$1\nrepo=$2\n'+source[start:end])
         self.workspace=self.root/'workspace'

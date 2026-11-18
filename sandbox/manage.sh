@@ -81,7 +81,7 @@ test -f "$HOME/.config/dotfiles/AGENTS.md"
 git -C /home/agent/workspace rev-parse --verify HEAD >/dev/null
 git -C /home/agent/workspace remote get-url origin >/dev/null
 failed=0
-for tool in node npm t3 codex claude cursor-agent agy; do
+for tool in node npm codex claude cursor-agent agy; do
   printf '%s: ' "$tool"
   if ! "$tool" --version; then
     printf 'Check failed for %s. Run manage.sh refresh.\n' "$tool" >&2
@@ -152,7 +152,7 @@ fi
 # Only resource, template, and kit options may be forwarded. No workspace mounts.
 # Keep this nonempty: macOS's Bash 3.2 treats empty arrays as unset under nounset.
 # Built-in agents resolve to v3 kits; every companion kit must use v3 too.
-options=(--cpus 4 --memory 4g --skills readonly --kit docker.io/sbx/t3code:latest)
+options=(--cpus 4 --memory 4g --skills readonly)
 while [[ $# -gt 0 ]]; do
   case $1 in
     --cpus | --memory | --template | --pull | --kit | --kit-arg | --kit-args-file)
@@ -209,4 +209,4 @@ sbx cp "$root/dot_codex/AGENTS.md" "$name:$destination/base.md"
 sbx cp "$root/dot_config/git/ignore" "$name:$destination/gitignore"
 sbx exec -u 1000 "$name" -- bash "$destination/bootstrap.sh" \
   "$repo" "$browser" "$git_name" "$git_email" "$action"
-printf '\nT3 SSH host: %s.sbx\nProject path: /home/agent/workspace\n' "$name"
+printf '\nSSH host: %s.sbx\nProject path: /home/agent/workspace\n' "$name"

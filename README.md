@@ -1,7 +1,7 @@
 # dotfiles
 
-Apple Silicon Mac preferences and T3 Code over SSH to mountless Docker Sandboxes.
-Code, agents, dependencies, and task worktrees stay inside each project sandbox.
+Apple Silicon Mac preferences and mountless Docker Sandboxes. Connect to a project over
+SSH from T3 Code, another editor, or a terminal.
 
 ## Install
 

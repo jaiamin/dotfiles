@@ -121,7 +121,7 @@ setup_providers() (
   setup_provider claude install_from https://claude.ai/install.sh || failed+=(Claude)
   setup_provider cursor-agent update_cursor || failed+=(Cursor)
   setup_provider agy update_antigravity || failed+=(Antigravity)
-  if [[ ${failed[*]} ]]; then
+  if [[ -n ${failed[*]-} ]]; then
     printf 'Provider setup failed for %s. Fix the errors above and retry refresh.\n' "${failed[*]}" >&2
     exit 1
   fi
@@ -211,14 +211,6 @@ if [[ ! -f $state_dir/tools-v1 ]]; then
   touch "$state_dir/tools-v1"
 fi
 
-# T3 readiness also runs on refresh of an existing managed sandbox.
-# New sandboxes receive t3 from Docker's kit; older ones install it here.
-if ! command -v t3 >/dev/null; then
-  npm_global t3@latest
-fi
-# Fail provisioning now if a native dependency is missing, rather than timing out in T3.
-t3 --version
-
 # sbx sources this for agent sessions and non-interactive SSH shells.
 # Preserve existing settings, and let an explicit telemetry preference win.
 # shellcheck disable=SC2016
@@ -260,8 +252,7 @@ HOOK
   chmod 755 "$hook"
 fi
 
-# Task ownership belongs to T3 Code or ordinary Git worktrees.
-# Never switch or reset the primary checkout during a refresh.
+# Set the pull policy on the existing checkout.
 git -C "$workspace" config pull.ff only
 
 # Share the generated guidance while preserving user-authored instructions.
