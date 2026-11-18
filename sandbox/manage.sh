@@ -14,13 +14,15 @@ usage='Usage: manage.sh create NAME OWNER/REPO AGENT [false|true] [-- SBX_OPTION
 [[ $# -ge 2 ]] || die "$usage"
 action=$1 name=$2
 shift 2
-[[ $name =~ ^[a-z][a-z0-9-]{1,47}$ && $name != default ]] || die 'Invalid sandbox name.'
+label='[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?'
+[[ ${#name} -ge 2 && ${#name} -le 63 && $name != default && $name =~ ^$label(\.$label)*$ ]] ||
+  die 'Invalid sandbox name. Use 2–63 letters, numbers, hyphens, or periods.'
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd -- "$here/.." && pwd)
 command -v sbx >/dev/null || die 'Install Docker Sandboxes (sbx) first.'
 
 managed_sandbox() {
-  sbx exec -u 1000 "$name" -- test -f /home/agent/.config/dotfiles/managed ||
+  sbx exec -u 1000 "$name" test -f /home/agent/.config/dotfiles/managed ||
     die "Expected a dotfiles-managed sandbox: $name"
 }
 
@@ -31,9 +33,11 @@ validate_port() {
 }
 
 port_command() {
-  local command=$1
+  local command=$1 help
   shift
-  if sbx port --help >/dev/null 2>&1; then
+  # Older sbx versions print root help and exit zero for an unknown command.
+  help=$(sbx port --help 2>/dev/null) || help=''
+  if [[ $help == *'sbx port COMMAND'* ]]; then
     sbx port "$command" "$name" "$@"
   elif [[ $command == ls ]]; then
     sbx ports "$name"
@@ -50,14 +54,20 @@ provider_key() {
     *) die 'Choose openai or anthropic.' ;;
   esac
   if [[ $action == auth-set ]]; then
+    local secret=''
+    IFS= read -r -s -p "$1 API key: " secret || true
+    if [[ -t 0 ]]; then printf '\n' >&2; fi
+    [[ -n $secret ]] || die 'Enter an API key to continue.'
     placeholder="sbx-cs-$(openssl rand -hex 12)"
     sbx policy allow network --sandbox "$name" "$host:443"
-    sbx secret set-custom --sandbox "$name" --host "$host" --env "$key" --placeholder "$placeholder"
+    printf '%s' "$secret" | sbx secret set-custom --sandbox "$name" --host "$host" --env "$key" \
+      --placeholder "$placeholder" --value-stdin
+    unset secret
   else
     sbx secret rm --sandbox "$name" --host "$host" --env-name "$key"
   fi
   # shellcheck disable=SC2016
-  sbx exec -u root "$name" -- sh -eu -c '
+  sbx exec -u root "$name" sh -eu -c '
     file=/etc/sandbox-persistent.sh
     [ -f "$file" ] || [ -n "$2" ] || exit 0
     touch "$file"
@@ -182,8 +192,8 @@ else
 fi
 
 destination=/home/agent/.config/dotfiles/source
-sbx exec -u 1000 "$name" -- mkdir -p "$destination"
-sbx exec -u 1000 "$name" -- touch /home/agent/.config/dotfiles/managed
+sbx exec -u 1000 "$name" mkdir -p "$destination"
+sbx exec -u 1000 "$name" touch /home/agent/.config/dotfiles/managed
 
 # Installer and sign-in endpoints. Scope to the named sandbox.
 hosts=(
@@ -207,6 +217,6 @@ for file in bootstrap.sh AGENTS.md; do
 done
 sbx cp "$root/dot_codex/AGENTS.md" "$name:$destination/base.md"
 sbx cp "$root/dot_config/git/ignore" "$name:$destination/gitignore"
-sbx exec -u 1000 "$name" -- bash "$destination/bootstrap.sh" \
+sbx exec -u 1000 "$name" bash "$destination/bootstrap.sh" \
   "$repo" "$browser" "$git_name" "$git_email" "$action"
 printf '\nSSH host: %s.sbx\nProject path: /home/agent/workspace\n' "$name"

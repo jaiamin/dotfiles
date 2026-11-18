@@ -6,6 +6,12 @@ sandbox/**
 tests
 tests/**
 
+# Navi 2.24 prefers the legacy macOS directory if it already exists.
+{{ if not (stat (printf "%s/Library/Application Support/navi/cheats" .chezmoi.destDir)) }}
+Library/Application Support/navi
+Library/Application Support/navi/**
+{{ end }}
+
 # Private local package lists
 .Brewfile.private
 Brewfile.private
