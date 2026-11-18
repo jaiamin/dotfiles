@@ -37,12 +37,15 @@ with open(os.environ['MOCK_LOG'],'a') as f: f.write(json.dumps(a)+'\\n')
 if a==['ls','-q']: print(os.environ.get('EXISTING',''))
 if a[0]=='create' and os.environ.get('FAIL_CREATE'): sys.exit(1)
 if a[0]=='exec' and 'test' in a and os.environ.get('UNMANAGED'): sys.exit(1)
-if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
+if a==['port','--help']:
+    print('Usage: sbx COMMAND' if os.environ.get('LEGACY_PORTS') else 'Usage: sbx port COMMAND')
+if a[:2]==['secret','set-custom']:
+    sys.exit(0 if '--value-stdin' in a and sys.stdin.read()=='fixture-api-key' else 1)
 ''')
         stub.chmod(0o755)
 
-    def run_manager(self, *args):
-        return subprocess.run([HOST_BASH, str(MANAGE), *args], env=self.env, text=True, capture_output=True)
+    def run_manager(self, *args, stdin=None):
+        return subprocess.run([HOST_BASH, str(MANAGE), *args], env=self.env, input=stdin, text=True, capture_output=True)
 
     def calls(self):
         return [json.loads(x) for x in self.log.read_text().splitlines()] if self.log.exists() else []
@@ -78,6 +81,8 @@ if a==['port','--help'] and os.environ.get('LEGACY_PORTS'): sys.exit(1)
     def test_invalid_inputs_never_create(self):
         cases = [
             ('create','x','owner/repo','claude'),
+            ('create','trailing-','owner/repo','claude'),
+            ('create','two..dots','owner/repo','claude'),
             ('create','my-project','owner/..','claude'),
             ('create','my-project','owner/repo;whoami','claude'),
             ('create','my-project','owner/repo','claude','yes'),
@@ -118,7 +123,7 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         result = self.run_manager('check','my-project')
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(self.calls(),[
-            ['exec','-u','1000','my-project','--','test','-f','/home/agent/.config/dotfiles/managed'],
+            ['exec','-u','1000','my-project','test','-f','/home/agent/.config/dotfiles/managed'],
             ['ssh','-o','BatchMode=yes','-o','ConnectTimeout=10','my-project.sbx','bash -s'],
         ])
         self.env['SSH_FAIL']='1'
@@ -133,7 +138,7 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         result = self.run_manager('refresh','my-project','owner/repo')
         self.assertEqual(result.returncode,0,result.stderr)
         calls = self.calls()
-        self.assertEqual(calls[0],['exec','-u','1000','my-project','--','test','-f','/home/agent/.config/dotfiles/managed'])
+        self.assertEqual(calls[0],['exec','-u','1000','my-project','test','-f','/home/agent/.config/dotfiles/managed'])
         policy = next(x for x in calls if x[0]=='policy')
         self.assertIn('registry.npmjs.org',policy[-1])
         self.assertFalse(any(x[0] in ('create','run','ports','rm') for x in calls))
@@ -149,15 +154,34 @@ sys.exit(int(os.environ.get('SSH_FAIL','0')))
         cases = [
             ('publish','port', ['publish','my-project','127.0.0.1:3000:8080']),
             ('unpublish','port', ['unpublish','my-project','127.0.0.1:3000:8080']),
+            ('ports','ports', ['my-project']),
             ('publish','ports', ['my-project','--publish','127.0.0.1:3000:8080']),
+            ('unpublish','ports', ['my-project','--unpublish','127.0.0.1:3000:8080']),
         ]
         for action, command, args in cases:
             with self.subTest(action=action,command=command):
                 if command == 'ports':
                     self.env['LEGACY_PORTS']='1'
-                result = self.run_manager(action,'my-project','3000','8080')
+                port_args = () if action == 'ports' else ('3000','8080')
+                result = self.run_manager(action,'my-project',*port_args)
                 self.assertEqual(result.returncode,0,result.stderr)
                 self.assertEqual(self.calls()[-1],[command,*args])
+
+    def test_ports_accept_docker_sandbox_names_with_periods(self):
+        result = self.run_manager('ports','2project.Dev')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(self.calls()[-1],['port','ls','2project.Dev'])
+
+    def test_setting_a_provider_key_passes_the_value_over_stdin(self):
+        result = self.run_manager('auth-set','my-project','openai',stdin='fixture-api-key\n')
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertNotIn('fixture-api-key',self.log.read_text())
+        self.assertEqual(self.calls()[-1][:7],['exec','-u','root','my-project','sh','-eu','-c'])
+
+    def test_setting_an_empty_provider_key_does_not_touch_docker(self):
+        result = self.run_manager('auth-set','my-project','anthropic',stdin='\n')
+        self.assertNotEqual(result.returncode,0)
+        self.assertEqual(self.calls(),[])
 
     def test_invalid_ports_and_network_targets_never_reach_docker(self):
         for args in (
@@ -366,6 +390,31 @@ else: shutil.copyfile(fixture,dest)
     def test_refresh_with_old_tools_marker_repairs_node_and_clones(self):
         self.exercise_full_bootstrap(marked=True)
 
+    @unittest.skipUnless(shutil.which('jq'), 'browser config test uses jq')
+    def test_browser_uses_playwright_path_and_closes_only_its_probe(self):
+        for name in ('jq','install'):
+            (self.bin/name).symlink_to(shutil.which(name))
+        chromium = self.root/'chromium-from-custom-cache'
+        chromium.write_text('')
+        chromium.chmod(0o755)
+        self.env['TEST_CHROMIUM'] = str(chromium)
+        self.tool('npx','#!/bin/sh\nprintf "%s\\n" "$TEST_CHROMIUM"\n')
+        self.tool('agent-browser','#!/bin/sh\nprintf "%s\\n" "$*" >>"$HOME/browser.log"\n')
+        source = BOOTSTRAP.read_text()
+        setup = source[source.index('setup_browser() ('):source.index('install_from() (')]
+        self.script.write_text('set -euo pipefail\n'+setup+'setup_browser\n')
+        config = self.root/'.agent-browser/config.json'
+        config.parent.mkdir()
+        config.write_text('{"headless":true}')
+        result = self.run_setup()
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(json.loads(config.read_text()),{'headless':True,'executablePath':str(chromium)})
+        opened, closed = (self.root/'browser.log').read_text().splitlines()
+        option, session, _ = opened.split(maxsplit=2)
+        self.assertEqual(option,'--session')
+        self.assertTrue(session.startswith('dotfiles-check-'))
+        self.assertEqual(closed,f'--session {session} close')
+
     def test_provider_refresh_continues_after_one_install_fails(self):
         (self.bin/'bash').symlink_to(self.bash)
         self.tool('flock','#!/bin/sh\nexit 0\n')
@@ -515,8 +564,15 @@ class ChezmoiTests(unittest.TestCase):
                 self.assertEqual((home/name).read_text(), 'preserve')
             self.assertFalse((home/'sandbox').exists())
             self.assertFalse((home/'tests').exists())
-            self.assertTrue((home/'.local/share/navi/cheats/sandbox.cheat').is_file())
+            cheat = home/'.local/share/navi/cheats/sandbox.cheat'
+            self.assertTrue(cheat.is_file())
             self.assertTrue((home/'.gitconfig').is_file())
+            legacy = home/'Library/Application Support/navi/cheats'
+            self.assertFalse(legacy.exists())
+            legacy.mkdir(parents=True)
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((legacy/'dotfiles-sandbox.cheat').resolve(),cheat)
 
 
 if __name__ == '__main__':

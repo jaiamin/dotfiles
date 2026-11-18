@@ -57,10 +57,15 @@ ensure_node() (
 )
 
 setup_browser() (
+  cd "$HOME"
   command -v agent-browser >/dev/null || npm_global agent-browser
-  # Playwright supplies Linux ARM64 builds. Do not rely on auto-discovery.
-  npx --yes playwright@1.61.1 install --with-deps chromium
-  browser_path=$(find "$HOME/.cache/ms-playwright" -type f -path '*/chrome-linux*/chrome' -print -quit)
+  # Ask the pinned Playwright package for its Chromium path, including custom caches.
+  # shellcheck disable=SC2016
+  browser_path=$(npx --yes --package=playwright@1.61.1 -- sh -eu -c '
+    playwright install --with-deps --no-shell chromium >&2
+    playwright_cli=$(readlink -f "$(command -v playwright)")
+    node -e "console.log(require(process.argv[1]).chromium.executablePath())" "$(dirname "$playwright_cli")"
+  ')
   [[ -n $browser_path && -x $browser_path ]] || {
     echo 'Chromium binary not found.' >&2
     exit 1
@@ -76,8 +81,9 @@ setup_browser() (
     jq -n --arg path "$browser_path" '{executablePath: $path}' >"$tmp"
   fi
   install -m 600 "$tmp" "$config"
-  agent-browser open about:blank
-  agent-browser close
+  session="dotfiles-check-$$"
+  trap 'agent-browser --session "$session" close >/dev/null 2>&1 || true; rm -f -- "$tmp"' EXIT
+  agent-browser --session "$session" --executable-path "$browser_path" open about:blank
 )
 
 install_from() (
