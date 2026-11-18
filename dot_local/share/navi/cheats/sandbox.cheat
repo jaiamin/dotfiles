@@ -39,7 +39,7 @@ bash "$(chezmoi source-path)/sandbox/manage.sh" network-open '<sandbox>'
 # Remove sandbox-wide network rule
 bash "$(chezmoi source-path)/sandbox/manage.sh" network-restore '<sandbox>'
 
-# Update shared sandbox skills
+# Update repository-installed sandbox skills
 sbx skills update
 
 # Delete sandbox and its files (confirms)
@@ -53,6 +53,10 @@ bash "$(chezmoi source-path)/sandbox/manage.sh" auth-remove '<sandbox>' '<provid
 
 $ base_agent: printf '%s\n' codex claude cursor opencode --- --prevent-extra
 $ browser: printf '%s\n' false true --- --prevent-extra
+$ host: printf '\n' --- --map 'LC_ALL=C grep -Ex "[A-Za-z0-9][A-Za-z0-9.:-]*"'
+$ host_port: printf '\n' --- --map 'LC_ALL=C grep -Ex "[0-9]+"'
+$ name: printf '\n' --- --map 'LC_ALL=C grep -Ex "[A-Za-z0-9][A-Za-z0-9.-]*"'
 $ provider: printf '%s\n' openai anthropic --- --prevent-extra
-$ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner'
+$ repo: gh repo list jaiamin --limit 1000 --no-archived --json nameWithOwner --jq '.[].nameWithOwner' --- --map 'LC_ALL=C grep -Ex "[A-Za-z0-9-]+/[A-Za-z0-9_.-]+"'
 $ sandbox: sbx ls -q --- --prevent-extra
+$ sandbox_port: printf '\n' --- --map 'LC_ALL=C grep -Ex "[0-9]+"'
