@@ -48,10 +48,6 @@ brew "zoxide"
 brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
-# Agent orchestration platform
-cask "antigravity"
-# 3D creation suite
-cask "blender"
 # OpenAI's official ChatGPT desktop app
 cask "chatgpt"
 # Anthropic's official Claude AI desktop app
@@ -76,8 +72,6 @@ cask "ghostty"
 cask "google-chrome"
 # AI teammates that work across your apps and tools
 cask "grok-bot"
-# Keyboard shortcuts for every button on your screen
-cask "homerow"
 # Minimal Stream Deck usage widgets powered by CodexBar
 cask "jaiamin/meter/meter"
 # GameStream client
@@ -94,7 +88,5 @@ cask "tailscale-app"
 cask "visual-studio-code"
 # Native desktop client for WhatsApp
 cask "whatsapp"
-# Voice-to-text dictation with AI-powered auto-editing
-cask "wispr-flow"
 # Video communication and virtual meeting platform
 cask "zoom"
