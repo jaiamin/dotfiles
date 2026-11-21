@@ -76,6 +76,8 @@ cask "grok-bot"
 cask "jaiamin/meter/meter"
 # GameStream client
 cask "moonlight"
+# Replacement for Docker Desktop
+cask "orbstack"
 # Move and resize windows using keyboard shortcuts or snap areas
 cask "rectangle"
 # Build, run, and govern agents across the software development lifecycle
