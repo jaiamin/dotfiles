@@ -1,4 +1,4 @@
 % postgres
 
-# Open psql inside docker container
-docker compose exec postgres sh -c 'psql -u "$POSTGRES_USER" -d "$POSTGRES_DB"'
+# Open psql in docker container
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB'
