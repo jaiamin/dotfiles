@@ -1,6 +1,4 @@
 % postgres
 
-# Create local Postgres database and copy DATABASE_URL
-db='<database>'; createdb -- "$db" && printf 'DATABASE_URL=postgresql://%s@localhost:5432/%s\n' "$(whoami)" "$db" | pbcopy
-
-$ database: printf '\n' --- --map 'LC_ALL=C grep -Ex "[a-z][a-z0-9_]{0,62}"'
+# Open psql inside docker container
+docker compose exec postgres sh -c 'psql -u "$POSTGRES_USER" -d "$POSTGRES_DB"'
